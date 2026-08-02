@@ -1,25 +1,25 @@
 /**
- * Claude Agent SDK — ejecutar a Claude Code de forma programática (headless).
+ * Cursor SDK — ejecutar un agente de forma programática (headless).
  *
- * El paquete "@anthropic-ai/claude-code" se renombró a "@anthropic-ai/claude-agent-sdk".
- * Ejecutar con:  npx tsx sdk.ts
+ *   npm i @cursor/sdk
+ *   export CURSOR_API_KEY=...
+ *   npx tsx sdk.ts
  *
- * `query()` devuelve un async iterator de mensajes. `options.allowedTools`
- * restringe qué puede hacer el agente: aquí solo se le permite `Edit`.
+ * Docs: https://cursor.com/docs/sdk/typescript
+ *
+ * Nota: esto sustituye el ejemplo Claude Agent SDK
+ * (`@anthropic-ai/claude-agent-sdk` + query()). La API no es idéntica.
  */
-import { query } from "@anthropic-ai/claude-agent-sdk";
+import { Agent } from "@cursor/sdk";
 
-const prompt = "Busca queries duplicadas en el directorio ./src/queries";
+const prompt =
+  "Busca queries duplicadas en el directorio ./src/queries. Solo reporta; no edites.";
 
-for await (const message of query({
-  prompt,
-  options: {
-    allowedTools: ["Edit"], // acceso mínimo: principio de menor privilegio
-  },
-})) {
-  console.log(JSON.stringify(message, null, 2));
+const result = await Agent.prompt(prompt, {
+  apiKey: process.env.CURSOR_API_KEY!,
+  model: { id: "composer-2.5" },
+  local: { cwd: process.cwd() },
+});
 
-  if (message.type === "result") {
-    console.log("\n=== RESULTADO ===\n" + message.result);
-  }
-}
+console.log("status:", result.status);
+console.log("\n=== RESULTADO ===\n" + (result.result ?? ""));

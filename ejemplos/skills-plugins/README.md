@@ -1,45 +1,50 @@
-# Plugins, tools y skills
+# Skills (y qué pasó con plugins / slash commands)
 
-Los tres mecanismos de extensibilidad de Claude Code, de más simple a más potente.
+En Claude Code había tres capas: **tools**, **slash commands** (`.claude/commands/`), **skills**
+(`.claude/skills/`), más **plugins/marketplaces**. En Cursor la superficie útil es más corta.
 
-## 1. Tools (herramientas)
+## 1. Tools
 
-Lo que Claude puede *hacer*: `Read`, `Edit`, `Write`, `Bash`, `Grep`, `Glob`, `WebFetch`, `Task`
-(subagentes), más las tools `mcp__*` que añaden los servidores MCP. Controlas el acceso con el
-**allowlist de permisos** en `settings.json` (`allow` / `deny` / `ask`).
+Lo que el agente puede *hacer*: Read/Edit/Write, Shell, Grep, Glob, WebFetch, **Task** (subagentes),
+más tools MCP. El control fino no es el allowlist `allow`/`deny`/`ask` de Claude: son **approvals de
+Cursor**, **rules** y **hooks**.
 
-## 2. Slash commands (comandos custom)
+## 2. Skills (el mecanismo principal)
 
-Un fichero Markdown en `.claude/commands/<nombre>.md` = un comando `/<nombre>`. El cuerpo es el prompt
-que se ejecuta. Ideal para tareas repetibles cortas. Ver [`audit.md`](./.claude/commands/audit.md) → `/audit`.
+Una skill es una carpeta con `SKILL.md` + frontmatter (`name`, `description`). La `description` guía
+la **auto-selección**.
 
-## 3. Skills
+| Scope | Ruta |
+|---|---|
+| Proyecto (versionable) | `.cursor/skills/<nombre>/SKILL.md` |
+| Usuario (todos tus repos) | `~/.cursor/skills/<nombre>/SKILL.md` |
 
-Una **skill** empaqueta un flujo de trabajo repetible con instrucciones más ricas. Vive en
-`.claude/skills/<nombre>/SKILL.md` con frontmatter (`name`, `description`). La `description` es lo que
-Claude usa para **decidir cuándo invocarla** automáticamente. Ver
-[`deploy-staging/SKILL.md`](./.claude/skills/deploy-staging/SKILL.md).
+Ejemplos en esta carpeta:
 
-Diferencia clave frente a un slash command: la skill puede llevar ficheros de apoyo (scripts, plantillas,
-referencias) en su carpeta y Claude la **auto-selecciona** por su `description`; el slash command lo
-invocas tú explícitamente con `/`.
+- [`audit/SKILL.md`](./.cursor/skills/audit/SKILL.md) — sustituye al antiguo slash `/audit`
+- [`deploy-staging/SKILL.md`](./.cursor/skills/deploy-staging/SKILL.md) — skill de flujo
 
-## 4. Plugins y marketplaces
+Pack de metodología: `kg`, `kg-refresh`, `methodology-plan`, `sanitise-diff` en
+[`../../docs/ai-agents-code-methodology/cursor/skills/`](../../docs/ai-agents-code-methodology/cursor/skills/).
 
-Un **plugin** agrupa y distribuye skills + comandos + agentes + servidores MCP + hooks como una unidad
-instalable desde un *marketplace*.
+## 3. Slash commands de Claude — no hay copia 1:1
 
-```bash
-/plugin marketplace add <owner/repo>   # añadir un marketplace
-/plugin install <plugin>               # instalar
-/plugin                                 # gestionar los instalados
+`.claude/commands/<nombre>.md` → `/nombre` **no existe** igual en Cursor.
+**Adaptación:** conviértelo en skill (como `audit`). El usuario puede pedir “corre el skill audit” o
+dejar que el agente lo auto-seleccione por `description`.
+
+## 4. Plugins y marketplaces — no disponibles
+
+```text
+/plugin marketplace add …   # Claude Code only
+/plugin install gsd …
 ```
 
-Así se distribuyen setups completos: p. ej. GSD (ver `../gsd/`) instala decenas de skills `gsd-*`,
-agentes y comandos de una vez.
+Cursor **no** tiene el marketplace de plugins de Claude Code. Distribuye setups como:
 
-## 5. Subagents (agent types)
+1. Carpeta versionada `.cursor/` (rules + skills + mcp + hooks), o
+2. El starter-kit [`ai-agents-code-methodology`](../../docs/ai-agents-code-methodology/) + bootstrap.
 
-Con la tool `Task` lanzas **subagentes** con su propio contexto y presupuesto: `Explore` (búsqueda
-read-only), `Plan` (arquitectura), `general-purpose`, o agentes especializados de un plugin. Sirven para
-paralelizar trabajo independiente sin ensuciar tu contexto principal.
+## 5. Subagents
+
+Ver [`../subagents/`](../subagents/) — tool **Task** con tipos `explore`, `generalPurpose`, etc.

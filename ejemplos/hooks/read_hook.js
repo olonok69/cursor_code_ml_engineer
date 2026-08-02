@@ -1,13 +1,10 @@
 #!/usr/bin/env node
 /**
- * PreToolUse hook (matcher: Read|Grep) — HOOK DE SEGURIDAD.
+ * beforeReadFile / preToolUse — HOOK DE SEGURIDAD (Cursor).
+ * Bloquea lectura de ficheros .env (secretos).
  *
- * Bloquea que el agente lea ficheros de secretos (.env).
- *
- * Contrato de un hook:
- *   - Recibe el payload JSON de la tool por STDIN.
- *   - exit 0  -> permite la operación.
- *   - exit 2  -> la BLOQUEA y devuelve stderr a Claude como feedback.
+ * Respuesta Cursor: JSON con permission deny|ask|allow (stdout), exit 0.
+ * exit 2 también deniega.
  */
 async function readStdin() {
   const chunks = [];
@@ -15,13 +12,40 @@ async function readStdin() {
   return Buffer.concat(chunks).toString();
 }
 
-const payload = JSON.parse(await readStdin());
-const readPath =
-  payload.tool_input?.file_path || payload.tool_input?.path || "";
-
-if (readPath.includes(".env")) {
-  console.error("Bloqueado: no puedes leer el fichero .env (contiene secretos).");
-  process.exit(2); // <-- bloquea
+function extractPath(payload) {
+  return (
+    payload.path ||
+    payload.filePath ||
+    payload.file_path ||
+    payload.uri ||
+    payload.tool_input?.file_path ||
+    payload.tool_input?.path ||
+    payload.args?.path ||
+    ""
+  );
 }
 
-process.exit(0); // <-- permite
+const raw = await readStdin();
+let payload = {};
+try {
+  payload = JSON.parse(raw || "{}");
+} catch {
+  process.stdout.write(JSON.stringify({ permission: "allow" }));
+  process.exit(0);
+}
+
+const readPath = String(extractPath(payload));
+if (readPath.includes(".env")) {
+  process.stdout.write(
+    JSON.stringify({
+      permission: "deny",
+      user_message: "Blocked: agent tried to read a .env file.",
+      agent_message:
+        "Bloqueado: no puedes leer ficheros .env (contienen secretos). Usa secretos vía env del proceso o un vault, no leas el fichero.",
+    }),
+  );
+  process.exit(0);
+}
+
+process.stdout.write(JSON.stringify({ permission: "allow" }));
+process.exit(0);

@@ -1,14 +1,31 @@
 # Un runbook real: sincronizar el workspace entre máquinas
 
+> ## Adaptación Cursor (léeme primero)
+>
+> Este runbook nació en un entorno **Claude Code** (`~/.claude`, skills `/kg`, `CLAUDE.md`).
+> Los **principios** (sync asimétrica, agente con guardrails, evidencia, humano en lo externo) aplican
+> igual en Cursor. Lo que cambia:
+>
+> | Claude Code | Cursor |
+> |---|---|
+> | Puntero en `CLAUDE.md` | Puntero en `AGENTS.md` / rule on-demand |
+> | Bundle de `~/.claude` (skills + memory) | Skills en `.cursor/skills/` o `~/.cursor/skills/`; memories de Cursor ≠ `MEMORY.md` |
+> | `codegraph` MCP en `~/.claude.json` | Re-pin `--path` en `.cursor/mcp.json` en el portátil |
+> | `/kg-refresh` skill Claude | Skill `kg-refresh` del pack Cursor + mismos scripts `kg_refresh.sh` |
+>
+> No copies a ciegas el tarball de `~/.claude` como “setup Cursor”. Lleva `data/`, repos git, y
+> reinstala la superficie `.cursor/` (bootstrap del pack metodología).
+>
+> ---
+>
 > Procedimiento real (sanitizado) para mover el workspace ILS entre la **máquina principal** y un
 > **portátil** (viajes). Es un buen ejemplo de tres cosas de la metodología a la vez:
 > **memoria durable cargada bajo demanda**, **ops conducidas por el agente con guardrails**, y
 > **"descubre, no asumas"**. Vive en `data/` (gitignored) — es contenido de máquina/ops, nunca se
 > commitea.
 >
-> En el `CLAUDE.md` no está el runbook entero: hay un **puntero de una línea** ("¿mover el workspace
-> main ⇄ portátil? carga `data/machine-sync/RUNBOOK.md`"). Se carga **solo cuando hace falta**. Es la
-> disciplina de contexto lean en acción.
+> En la orientación always-on **no** está el runbook entero: hay un **puntero de una línea** ("¿mover el
+> workspace main ⇄ portátil? carga `data/machine-sync/RUNBOOK.md`"). Se carga **solo cuando hace falta**.
 
 ## La idea: sincronización asimétrica
 
@@ -92,30 +109,29 @@ No se hace copia completa de vuelta: machacaría lo que la máquina principal hi
 
 ## Dos huecos que cierran unos subcomandos (bring-up + memoria)
 
-Un caso real: el workspace lleva un **grafo de conocimiento de tickets** (skill `/kg`, ver
+Un caso real: el workspace lleva un **grafo de conocimiento de tickets** (skill `kg` / `/kg` en Claude, ver
 [`../../docs/KNOWLEDGE_GRAPH.md`](../../docs/KNOWLEDGE_GRAPH.md)). Al viajar aparecen dos huecos que se
 resuelven con subcomandos idempotentes, no con pasos manuales fáciles de olvidar:
 
-- **Bring-up desde cero (portátil nuevo).** El bundle trae el grafo ya construido, los skills y la memoria,
+- **Bring-up desde cero (portátil nuevo).** El bundle trae el grafo ya construido y parte del tooling,
   pero **no** el paquete `graphify` ni un intérprete correcto. Un comando lo arregla:
   ```bash
-  bash data/knowledge-graph/kg_refresh.sh bootstrap   # instala el paquete, fija el intérprete, smoke-test /kg
+  bash data/knowledge-graph/kg_refresh.sh bootstrap   # instala el paquete, fija el intérprete, smoke-test kg
   ```
-- **La memoria no viaja en el delta.** El inbound excluye `~/.claude` (es machine-local), así que las notas
-  de memoria que escribiste en el portátil **no volverían**. Modelo *transporte-y-restaura* (mantiene
-  `~/.claude/…/memory` como única fuente de verdad, no un snapshot que la pise en silencio):
+  En Cursor: además re-bootstrap `.cursor/` (MCP `--path`, skills) si esa máquina no lo tenía.
+- **La memoria de Claude no viaja en el delta.** El inbound clásico excluye `~/.claude`. Si usas Cursor,
+  decide explícitamente qué viaja (`data/changes/`, snapshots) — no asumas que las memories del IDE se
+  sincronizan solas:
   ```bash
-  # En el PORTÁTIL, antes de armar el delta: parquear la memoria BAJO data/ para que viaje
-  bash data/knowledge-graph/kg_refresh.sh snapshot-memory     # memory/*.md -> data/…/_memory_snapshot/
-  # En la PRINCIPAL, tras aterrizar el delta: fusionar de vuelta (añade nuevos, sobrescribe
-  # cambiados TRAS backup; idénticos = no-op) y reconstruir el grafo
-  bash data/knowledge-graph/kg_refresh.sh restore-memory  &&  /kg-refresh
+  bash data/knowledge-graph/kg_refresh.sh snapshot-memory
+  # en la principal:
+  bash data/knowledge-graph/kg_refresh.sh restore-memory
+  # luego skill kg-refresh (Cursor) o /kg-refresh (Claude)
   ```
 
-Para el **agente del portátil** (que trabaja con su propia sesión de Claude), un único punto de entrada
-—`LAPTOP_START_HERE.md`— orquesta: restaurar el bundle → `bootstrap` → cómo seguir trabajando igual (skills,
-`CLAUDE.md`, `/kg` history-first) → cómo mandar el incremento de vuelta. El grafo es un artefacto **derivado**:
-nunca viaja de vuelta; se reconstruye donde esté el corpus actual.
+Para el **agente del portátil**, un único punto de entrada —`LAPTOP_START_HERE.md`— orquesta: restaurar
+el bundle → `bootstrap` → orientación (`AGENTS.md` / rules, skill `kg` history-first) → delta de vuelta.
+El grafo es un artefacto **derivado**: nunca viaja de vuelta; se reconstruye donde esté el corpus actual.
 
 ## El landing lo conduce un agente — con guardrails
 
@@ -151,7 +167,7 @@ diff data/changes/STATUS.md.mainbak data/changes/STATUS.md # ¿solo adiciones? -
 
 Reúne los principios de la metodología en una tarea de **ops**, no de código:
 
-- **Memoria durable, bajo demanda:** el runbook no está en el `CLAUDE.md` always-loaded; hay un puntero.
+- **Memoria durable, bajo demanda:** el runbook no está en la orientación always-on; hay un puntero.
 - **El humano es dueño de lo externo:** el agente aterriza el delta pero **no** hace push/merge; y para si
   hay ambigüedad.
 - **Evidencia antes que afirmaciones:** contar ficheros, `diff`, estados de PR — reportar hechos.

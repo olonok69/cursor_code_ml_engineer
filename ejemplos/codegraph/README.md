@@ -1,7 +1,9 @@
-# CodeGraph — inteligencia de código local
+# CodeGraph — inteligencia de código local (vía MCP en Cursor)
 
-Herramienta *local-first* que indexa tu código con **tree-sitter** en un **grafo SQLite** de símbolos,
-aristas y ficheros, y lo expone a Claude Code como servidor MCP.
+Herramienta *local-first* que indexa tu código con **tree-sitter** en un **grafo SQLite** y lo
+expone al agente como servidor MCP. En el curso Claude Code se instalaba con
+`codegraph install --target=claude`. En Cursor configuras el server en **`.cursor/mcp.json`**.
+
 Repo: https://github.com/colbymchenry/codegraph · Docs: https://colbymchenry.github.io/codegraph/
 
 ## Qué indexa (determinista, del AST — no resumido por un LLM)
@@ -10,74 +12,54 @@ Repo: https://github.com/colbymchenry/codegraph · Docs: https://colbymchenry.gi
 - **Aristas:** llamadas, imports, herencia, referencias, relaciones de framework.
 - **Ficheros:** estructura + búsqueda full-text.
 
-Todo vive en `.codegraph/` (una base SQLite local). **Sin servicios externos ni API keys.**
+Todo vive en `.codegraph/` (SQLite local). **Sin servicios externos ni API keys.** Añade `.codegraph/`
+al `.gitignore`.
 
-## Cómo funciona, a alto nivel (tres piezas)
-
-1. **Indexar** (`codegraph init`) — recorre el repo y parsea cada fichero con **tree-sitter**, un parser
-   sintáctico que entiende la gramática de cada lenguaje y produce el AST. No ejecuta código ni llama a
-   ningún LLM: análisis puramente sintáctico. De cada AST extrae nodos (símbolos) y aristas (llamadas,
-   imports, herencia, referencias).
-2. **Guardar el grafo** — todo se escribe en la SQLite de `.codegraph/`. De ahí las propiedades: local,
-   determinista (mismo código → mismo grafo) y barato de refrescar (`sync` re-parsea solo lo cambiado).
-3. **Consultar** — `codegraph_explore` no "lee código": **camina el grafo**. Localiza el nodo, sigue las
-   aristas hacia arriba (callers) y hacia abajo (callees), calcula el blast radius transitivamente, cruza
-   con los tests para los flags de cobertura, y devuelve todo eso más la fuente literal en una respuesta.
-
-La analogía: es lo que hace tu IDE por debajo en "Find usages" / "Go to definition" — un índice
-precomputado — pero empaquetado para que un **agente** lo consulte por MCP. Y es el mismo patrón de ROI
-del grafo de tickets (`/kg`): **parsear una vez al indexar, recuperar mil en cada consulta** — CodeGraph
-sin inferencia ni siquiera en el build; graphify con inferencia solo en el build.
-
-## "Blast radius", en palabras sencillas
-
-Es la "onda expansiva" de tocar un símbolo: **todo lo que se puede romper si lo cambias**. CodeGraph
-recorre el grafo de llamadas hacia atrás y responde: *"a esta función la llaman estos 7 sitios; esos
-alimentan a estos otros 3; de todo el conjunto, estos 4 tienen tests y estos 6 no"*. Antes de editar una
-línea ya sabes si tocas una pieza aislada o un pilar del que cuelga medio sistema. Sin el grafo, esa
-pregunta se responde con grep — que encuentra el *texto* pero no sigue el dispatch dinámico ni te dice
-quién llama a quién. Matiz: el blast radius de CodeGraph es *plano* (mezcla métodos homónimos); el
-veredicto fino pre-rename lo da Serena `find_referencing_symbols` (ver tabla más abajo).
-
-## Qué problema resuelve
-
-El bucle habitual "grep → abrir fichero → seguir el import → volver a grepear" gasta muchísimo contexto.
-CodeGraph lo reemplaza por **una consulta**: `codegraph_explore` devuelve el **código fuente verbatim y
-numerado** de los símbolos relevantes, **más las rutas de llamada** entre ellos (incluidos saltos de
-dispatch dinámico que grep no puede seguir) y un resumen del **blast radius** (qué se rompería al cambiar).
-
-Según sus benchmarks, dar acceso a CodeGraph a un agente produjo **58% menos tool calls**, **22% más
-rápido** y prácticamente eliminó las lecturas de fichero.
-
-## CLI
+## CLI (igual)
 
 ```bash
-codegraph init        # crea el índice .codegraph/ y lo construye (decisión explícita del usuario)
-codegraph sync        # re-indexa incremental tras editar (en WSL2 /mnt, hazlo a mano: el watcher pierde eventos)
-codegraph watch       # re-indexa en vivo en background (poco fiable en /mnt)
-codegraph explore "<símbolo o pregunta>"   # fuente + rutas + blast radius + cobertura, en 1 round-trip
-codegraph impact|callers|node <símbolo>    # blast radius / callers / 1 símbolo + su trail
-codegraph install --target=claude --location=global   # escribe la config MCP (--location: global|local, NO user)
-codegraph serve --path <repo> --mcp        # arranca el server MCP; --path fija el proyecto POR DEFECTO
-codegraph status                            # estado del índice (nodos, aristas, frescura)
+codegraph init        # crea el índice .codegraph/ y lo construye
+codegraph sync        # re-indexa incremental
+codegraph watch       # re-indexa en vivo (poco fiable en WSL /mnt)
+codegraph explore "<símbolo o pregunta>"
+codegraph serve --path <repo> --mcp
+codegraph status
 ```
-Desde Claude Code (MCP), la tool **`codegraph_explore`** hace lo mismo en un solo round-trip. El server MCP
-**no tiene proyecto por defecto** salvo que lo arranques con `--path <repo>`: fíjalo y no necesitas pasar
-`projectPath`; pásalo solo para consultar **otro** repo indexado (útil en un monorepo o con varios repos —
-p. ej. ya indexamos `monolith` y `frontend`). Si un repo no tiene `.codegraph/`, no se usa: indexar es
-decisión del usuario. Trata la fuente que imprime como **ya leída** — no re-abras ese fichero (ahí está el
-ahorro real de tokens).
 
-## CodeGraph vs. Serena vs. grep — cuándo cada uno
+## Conectar a Cursor
+
+En `.cursor/mcp.json`:
+
+```json
+"codegraph": {
+  "command": "codegraph",
+  "args": ["serve", "--path", "/absolute/path/to/repo", "--mcp"]
+}
+```
+
+1. Sustituye el path por tu repo (el server **no** tiene proyecto por defecto útil si el workspace root
+   no tiene `.codegraph/`).
+2. Recarga Cursor.
+3. Llama `codegraph_explore` desde el agente.
+
+> `codegraph install --target=claude` **no** configura Cursor. Usa el JSON de arriba o el bootstrap
+> [`bootstrap-cursor-repo.ps1`](../../docs/ai-agents-code-methodology/scripts/bootstrap-cursor-repo.ps1.txt).
+
+Trata la fuente que imprime `codegraph_explore` como **ya leída** — no re-abras ese fichero.
+
+## CodeGraph vs. Serena vs. grep
 
 | Pregunta | Herramienta |
 |---|---|
-| **Survey (primero):** "dame fuente + callers + qué se rompe + ¿está testeado?" | **CodeGraph** `codegraph_explore` (fuente + rutas + blast radius + cobertura en 1 llamada) |
-| **Chequeo preciso antes de un rename/borrado** | **Serena** `find_referencing_symbols` — desambigua homónimos por clase (el `impact` plano de CodeGraph los mezcla) |
-| "Overview de símbolos" / "cuerpo de esta función" | **Serena** `get_symbols_overview` / `find_symbol` (o la fuente que ya imprimió `explore`) |
-| Búsqueda textual simple de una cadena / literal | grep / `search_for_pattern` |
+| Survey: fuente + callers + blast radius + ¿testeado? | **CodeGraph** `codegraph_explore` |
+| Chequeo preciso antes de rename/borrado | **Serena** `find_referencing_symbols` |
+| Overview / cuerpo de un símbolo | Serena o la fuente que ya dio `explore` |
+| Literal / string | grep |
 
-En el flujo real (ver [`../metodologia/EJEMPLO_REAL.md`](../metodologia/EJEMPLO_REAL.md)), CodeGraph entra
-**primero** en la **etapa 4 (investigar)** para el survey (símbolos + rutas de llamada + cobertura, sin leer
-los ficheros de 5k líneas enteros); Serena `find_referencing_symbols` hace el chequeo preciso justo antes de
-tocar. CodeGraph responde *"qué es y cómo se conecta"*; Serena, *"quién referencia exactamente esto"*.
+En la metodología (etapa 4): CodeGraph primero, Serena antes de tocar. Ver
+[`../metodologia/EJEMPLO_REAL.md`](../metodologia/EJEMPLO_REAL.md).
+
+## Blast radius
+
+Onda expansiva de tocar un símbolo: callers transitivos + flags de cobertura. El blast de CodeGraph es
+*plano* (mezcla homónimos); el veredicto fino pre-rename lo da Serena.

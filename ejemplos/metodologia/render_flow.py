@@ -26,8 +26,21 @@ TEXT   = (232, 234, 237)
 MUTED  = (154, 164, 178)
 
 def font(size, bold=False):
-    name = "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf"
-    return ImageFont.truetype(name, size * SS)
+    import os
+    windir = os.environ.get("WINDIR", r"C:\Windows")
+    candidates = (
+        ["DejaVuSans-Bold.ttf", os.path.join(windir, "Fonts", "seguisb.ttf"),
+         os.path.join(windir, "Fonts", "arialbd.ttf")]
+        if bold else
+        ["DejaVuSans.ttf", os.path.join(windir, "Fonts", "segoeui.ttf"),
+         os.path.join(windir, "Fonts", "arial.ttf")]
+    )
+    for name in candidates:
+        try:
+            return ImageFont.truetype(name, size * SS)
+        except OSError:
+            continue
+    return ImageFont.load_default()
 
 # (num, etiqueta, es_gate, nota_de_rama)
 NODES = [
@@ -90,7 +103,7 @@ f_note  = font(13)
 f_leg   = font(13)
 
 # título + leyenda
-left_text(NX, 52, "Flujo de trabajo con Claude Code — 11 etapas", f_title, TEXT)
+left_text(NX, 52, "Flujo de trabajo con agentes (Cursor) — 11 etapas", f_title, TEXT)
 left_text(NX, 92, "El agente es un colaborador disciplinado; cada rombo es un GATE (punto de decisión).",
           f_sub, MUTED)
 # leyenda de color

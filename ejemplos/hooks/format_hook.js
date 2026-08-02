@@ -1,13 +1,7 @@
 #!/usr/bin/env node
 /**
- * PostToolUse hook (matcher: Write|Edit|MultiEdit) — GATE DE CALIDAD (formato).
- *
- * Formatea con prettier el fichero que Claude acaba de editar.
- * Es NO-BLOQUEANTE a propósito: el formateo nunca debe frenar la edición.
- *
- * Nota importante sobre el payload:
- *   - En PostToolUse el resultado real está en tool_response (p. ej. filePath).
- *   - En PreToolUse solo tienes la intención en tool_input.file_path.
+ * afterFileEdit — GATE DE CALIDAD (formato) — Cursor.
+ * prettier --write sobre el fichero editado. NO-BLOQUEANTE.
  */
 import { execFileSync } from "node:child_process";
 
@@ -17,9 +11,19 @@ async function readStdin() {
   return Buffer.concat(chunks).toString();
 }
 
-const payload = JSON.parse(await readStdin());
-const filePath =
-  payload.tool_response?.filePath || payload.tool_input?.file_path;
+function extractPath(payload) {
+  return (
+    payload.path ||
+    payload.filePath ||
+    payload.file_path ||
+    payload.tool_response?.filePath ||
+    payload.tool_input?.file_path ||
+    ""
+  );
+}
+
+const payload = JSON.parse((await readStdin()) || "{}");
+const filePath = extractPath(payload);
 
 if (filePath) {
   try {
@@ -27,7 +31,7 @@ if (filePath) {
       stdio: "ignore",
     });
   } catch {
-    // No-bloqueante por diseño: si prettier falla, no rompemos la operación.
+    // No-bloqueante por diseño
   }
 }
 
