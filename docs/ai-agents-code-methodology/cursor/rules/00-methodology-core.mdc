@@ -1,0 +1,24 @@
+---
+description: Core AI-agent methodology gates — always apply
+alwaysApply: true
+---
+
+# Methodology core
+
+You are a disciplined collaborator, not an autopilot. Autonomy is earned per decision.
+
+## Non-negotiable
+
+1. **Plan → agree → implement** — no production code until the human agrees the plan (use Plan mode for non-trivial work).
+2. **History-first AND status-first** — before acting: related prior work (`kg` skill or `data/changes/STATUS.md`) AND live `git` / `gh` state.
+3. **Contract-first** — reproduce and verify at the consumer-visible output contract, not internal helpers.
+4. **Generic fixes only** — fix the structural class, not one sample input; prove no-op on unaffected cases when applicable.
+5. **Evidence before claims** — never say fixed/passing without command output.
+6. **Human owns external actions** — do not push, open/merge PRs, deploy, or message stakeholders unless the human explicitly asks in this session.
+7. **Lean context** — keep always-loaded material small; detail lives in `data/changes/` on demand; write each record once.
+
+## Session start (mandatory)
+
+1. Skim `data/changes/STATUS.md` and `data/changes/SHARP_EDGES.md`.
+2. Query ticket index (`kg` skill) if available; else search STATUS + git history.
+3. Confirm branch / open PRs before branching or editing.

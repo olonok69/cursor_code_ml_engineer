@@ -1,0 +1,27 @@
+flowchart TD
+    A[Task arrives:<br/>bug report / feature / change] --> B[Orient: history-first AND status-first<br/>query the record index first,<br/>then read the related records in full]
+    B --> C{Inbound triage:<br/>symptom real in the<br/>output contract?}
+    C -- "No (downstream)" --> C1[Push back with evidence.<br/>Do not write code.]
+    C -- Yes --> P{Pre-existing or<br/>regression?}
+    P -- "Pre-existing" --> P1[Prove it predates the change<br/>before owning or refusing]
+    P1 --> D
+    P -- "Caused here" --> D[Investigate: cheap deterministic oracle first<br/>parser / graph-index / static check,<br/>root cause before any paid run]
+    D --> E[Plan:<br/>present options + trade-offs]
+    E --> F{Human agrees?}
+    F -- "No / refine" --> E
+    F -- Yes --> G[Implement: TDD<br/>RED -> GREEN, minimal change]
+    G --> H[Verify:<br/>unit + scoped + regression suites]
+    H --> I{Outbound gate:<br/>fixed output contract<br/>reproduced locally?}
+    I -- No --> D
+    I -- Yes --> J[Document:<br/>why + what + handover<br/>+ acceptance criteria + lessons]
+    J --> S[Sanitize:<br/>scan staged diff for names /<br/>IDs / agent attribution]
+    S --> K[Hand off:<br/>human owns push / PR / deploy]
+    K --> R{Automated review:<br/>valid findings?}
+    R -- "Yes" --> G
+    R -- "No / all addressed" --> L[Persist:<br/>update registries + lean memory,<br/>codify reusable lessons]
+    L --> A
+
+    classDef gate fill:#fff3cd,stroke:#b8860b;
+    classDef stop fill:#f8d7da,stroke:#a00;
+    class C,F,I,P,R gate;
+    class C1 stop;

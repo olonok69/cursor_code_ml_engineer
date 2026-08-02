@@ -1,0 +1,29 @@
+%% Fuente editable del diagrama agents.png (render: python render_agents.py)
+%% Izquierda: Task/subagents en Cursor (contexto aislado, resumen).
+%% Derecha: Agent Teams de Claude Code — NO disponible en Cursor (referencia del curso).
+flowchart LR
+  subgraph S["CURSOR — Task / subagents"]
+    M["Sesión principal\n(tu contexto)"]
+    A1["explore\n(read-only)"]
+    A2["generalPurpose"]
+    A3["rol vía skill o\nprompt template\n(security / refactor-scout)"]
+    M -- "prompt con contexto" --> A1
+    M -- " " --> A2
+    M -- " " --> A3
+    A1 -- "solo el RESUMEN vuelve" --> M
+    A2 -- " " --> M
+    A3 -- " " --> M
+  end
+  subgraph T["CLAUDE ONLY — Agent Teams\n(no existe en Cursor)"]
+    L["Lead\n(sesión completa)"]
+    T1["Teammate A"]
+    T2["Teammate B"]
+    TL[("Task list compartida")]
+    L <--> T1
+    L <--> T2
+    T1 <-- "mensajería directa" --> T2
+    L --- TL
+    T1 --- TL
+    T2 --- TL
+  end
+  S -. "aislar contexto, coste bajo" .- T

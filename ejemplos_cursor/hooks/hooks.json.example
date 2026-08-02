@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeReadFile": [
+      {
+        "command": "node .cursor/hooks/read_hook.js",
+        "failClosed": true
+      }
+    ],
+    "preToolUse": [
+      {
+        "command": "node .cursor/hooks/log_hook.js pre-log.json"
+      },
+      {
+        "command": "node .cursor/hooks/query_hook.js",
+        "matcher": "Write|Edit",
+        "timeout": 300
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": "node .cursor/hooks/log_hook.js post-log.json"
+      }
+    ],
+    "afterFileEdit": [
+      {
+        "command": "node .cursor/hooks/format_hook.js"
+      },
+      {
+        "command": "node .cursor/hooks/tsc.js",
+        "failClosed": true
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "node .cursor/hooks/block_external.js",
+        "matcher": "git\\s+push|gh\\s+pr\\s+create|gh\\s+pr\\s+merge",
+        "failClosed": true
+      }
+    ]
+  }
+}

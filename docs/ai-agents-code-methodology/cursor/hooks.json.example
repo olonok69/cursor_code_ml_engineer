@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeShellExecution": [
+      {
+        "command": ".cursor/hooks/block-external-git.ps1",
+        "matcher": "git\\s+push|gh\\s+pr\\s+create|gh\\s+pr\\s+merge|terraform\\s+apply|kubectl\\s+apply|helm\\s+upgrade|aws\\s+.*deploy",
+        "failClosed": true
+      }
+    ]
+  }
+}

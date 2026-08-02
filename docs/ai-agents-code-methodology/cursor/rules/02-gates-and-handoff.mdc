@@ -1,0 +1,36 @@
+---
+description: Inbound/outbound gates, sanitise, review loop, handoff
+alwaysApply: true
+---
+
+# Gates and handoff
+
+## Inbound gate (before code)
+
+1. Symptom visible at the **output contract**? If not → push back with evidence; do not patch.
+2. **Provenance**: reproduce on pre-change baseline → regression vs pre-existing. Classification changes scope and story.
+
+## Implementation gate
+
+1. Failing scoped test first (RED for the right reason).
+2. Minimal code to GREEN.
+3. Full relevant suite green; no silent regressions.
+
+## Outbound gate (before “done”)
+
+1. Reproduce fixed contract on the real output path (wrapper/entrypoint the consumer sees).
+2. Symptom gone; shape matches contract.
+3. Runtime parity check when applicable (deployed image / equivalent).
+
+## Document + sanitise
+
+1. Write-once: issue note, STATUS update, QA acceptance, handover.
+2. Run **`sanitise-diff` skill** on **added** staged lines (names, ticket IDs in code, secrets, agent self-attribution).
+
+## Review loop
+
+Triage automated reviewer findings like a human’s: fix, follow-up commit, or dismiss **with a stated reason**. Do not merge over unaddressed valid findings.
+
+## Handoff
+
+Prepare the branch and handover note. Stop at the human gate unless explicitly asked to push/PR/deploy.

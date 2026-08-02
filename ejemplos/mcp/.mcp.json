@@ -1,0 +1,29 @@
+{
+  "//": "Ejemplo de .mcp.json en la raíz del repo (scope 'project'): se comparte con el equipo y se versiona.",
+  "//scopes": "local = solo tú, esta máquina · project = .mcp.json versionado · user = ~/.claude, todos tus proyectos.",
+  "mcpServers": {
+    "serena": {
+      "//": "Navegación semántica de código (símbolos, referencias). Vía uvx.",
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"]
+    },
+    "context7": {
+      "//": "Documentación viva de librerías/frameworks. Servidor remoto (HTTP).",
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
+    },
+    "playwright": {
+      "//": "Automatización de navegador (snapshots, clicks) para verificar la UI.",
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"]
+    },
+    "supabase": {
+      "//": "Ejemplo de server con secreto: NUNCA hardcodees la key; usa variables de entorno.",
+      "command": "npx",
+      "args": ["-y", "@supabase/mcp-server-supabase@latest"],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
+      }
+    }
+  }
+}

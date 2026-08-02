@@ -1,0 +1,29 @@
+%% Flujo real de trabajo con un agente de coding (sanitizado).
+%% Los rombos son GATES (puntos de decisión); el rojo es un STOP (no escribir código).
+flowchart TD
+    A[Llega tarea:<br/>bug / feature / cambio] --> B[Orientar:<br/>history-first Y status-first]
+    B --> C{Triaje inbound:<br/>¿el síntoma es real en el<br/>contrato de salida?}
+    C -- "No (aguas abajo)" --> C1[Push back con evidencia.<br/>No escribir código.]
+    C -- Sí --> P{¿Pre-existente<br/>o regresión?}
+    P -- "Pre-existente" --> P1[Probar que precede al cambio<br/>antes de asumirlo o rechazarlo]
+    P1 --> D
+    P -- "Lo causamos aquí" --> D[Investigar:<br/>oráculo determinista barato primero,<br/>causa raíz antes que parches]
+    D --> E[Plan:<br/>opciones + trade-offs]
+    E --> F{¿El humano<br/>está de acuerdo?}
+    F -- "No / refinar" --> E
+    F -- Sí --> G[Implementar: TDD<br/>RED -> GREEN, cambio mínimo]
+    G --> H[Verificar:<br/>suites unit + scoped + regresión]
+    H --> I{Gate outbound:<br/>¿contrato de salida arreglado<br/>reproducido en local?}
+    I -- No --> D
+    I -- Sí --> J[Documentar:<br/>por qué + qué + handover<br/>+ criterios de aceptación + lecciones]
+    J --> S[Sanitizar:<br/>escanear el diff staged por<br/>nombres / IDs / atribución del agente]
+    S --> K[Handoff:<br/>el humano hace push / PR / deploy]
+    K --> R{Revisión automática:<br/>¿hallazgos válidos?}
+    R -- "Sí" --> G
+    R -- "No / todo atendido" --> L[Persistir:<br/>actualizar registros + memoria lean,<br/>codificar lecciones reutilizables]
+    L --> A
+
+    classDef gate fill:#fff3cd,stroke:#b8860b;
+    classDef stop fill:#f8d7da,stroke:#a00;
+    class C,F,I,P,R gate;
+    class C1 stop;

@@ -1,0 +1,28 @@
+{
+  "session_id": "5e9ccd74-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "cwd": "/home/dev/mi-proyecto",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Edit",
+  "tool_input": {
+    "file_path": "src/queries/order_queries.ts",
+    "old_string": "…",
+    "new_string": "…"
+  },
+  "tool_response": {
+    "filePath": "src/queries/order_queries.ts",
+    "oldString": "…",
+    "newString": "…",
+    "originalFile": "…",
+    "userModified": false,
+    "replaceAll": false,
+    "structuredPatch": [
+      {
+        "oldStart": 137,
+        "oldLines": 4,
+        "newStart": 137,
+        "newLines": 9,
+        "lines": ["+ export function getStalePendingOrders(db, minDays = 3) {", "+   …", "+ }"]
+      }
+    ]
+  }
+}

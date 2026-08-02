@@ -1,0 +1,15 @@
+{
+  "session_id": "5e9ccd74-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  "transcript_path": "~/.claude/projects/<proyecto>/<sesion>.jsonl",
+  "cwd": "/home/dev/mi-proyecto",
+  "permission_mode": "default",
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Edit",
+  "tool_input": {
+    "file_path": "src/queries/order_queries.ts",
+    "old_string": "…",
+    "new_string": "…",
+    "replace_all": false
+  },
+  "tool_use_id": "toolu_01Jsr1qEfMrYyNqSfa5WcbYj"
+}

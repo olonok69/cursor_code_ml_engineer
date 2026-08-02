@@ -1,0 +1,47 @@
+# Rename this file to bootstrap-new-repo.ps1 on the target machine before running.
+
+param(
+    [string]$RepoRoot = "."
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+$repo = (Resolve-Path $RepoRoot).Path
+$changesDir = Join-Path $repo "data/changes"
+$methodologyDir = Join-Path $changesDir "ai-agent-methodology"
+$templatesDir = Join-Path $methodologyDir "templates"
+
+if (-not (Test-Path $methodologyDir)) {
+    throw "Methodology folder not found: $methodologyDir"
+}
+
+New-Item -ItemType Directory -Force -Path $changesDir | Out-Null
+
+function Ensure-FileFromTemplate {
+    param(
+        [string]$Target,
+        [string]$Template
+    )
+
+    if (-not (Test-Path $Target)) {
+        Copy-Item -Path $Template -Destination $Target -Force
+        Write-Host "Created: $Target"
+    }
+    else {
+        Write-Host "Exists:  $Target"
+    }
+}
+
+Ensure-FileFromTemplate -Target (Join-Path $changesDir "STATUS.md") -Template (Join-Path $templatesDir "STATUS_TEMPLATE.md")
+Ensure-FileFromTemplate -Target (Join-Path $changesDir "FOLLOWUPS.md") -Template (Join-Path $templatesDir "FOLLOWUPS_TEMPLATE.md")
+Ensure-FileFromTemplate -Target (Join-Path $changesDir "SHARP_EDGES.md") -Template (Join-Path $templatesDir "SHARP_EDGES_TEMPLATE.md")
+Ensure-FileFromTemplate -Target (Join-Path $changesDir "_handover_template.md") -Template (Join-Path $templatesDir "HANDOVER_TEMPLATE.md")
+Ensure-FileFromTemplate -Target (Join-Path $changesDir "_qa_acceptance_template.md") -Template (Join-Path $templatesDir "QA_ACCEPTANCE_TEMPLATE.md")
+Ensure-FileFromTemplate -Target (Join-Path $changesDir "_issue_note_template.md") -Template (Join-Path $templatesDir "ISSUE_NOTE_TEMPLATE.md")
+Ensure-FileFromTemplate -Target (Join-Path $changesDir "_copilot_working_agreement_template.md") -Template (Join-Path $templatesDir "COPILOT_WORKING_AGREEMENT_TEMPLATE.md")
+Ensure-FileFromTemplate -Target (Join-Path $changesDir "_cursor_working_agreement_template.md") -Template (Join-Path $templatesDir "CURSOR_WORKING_AGREEMENT_TEMPLATE.md")
+Ensure-FileFromTemplate -Target (Join-Path $changesDir "_orientation_template.md") -Template (Join-Path $templatesDir "ORIENTATION_TEMPLATE.md")
+
+Write-Host "Bootstrap complete."
+Write-Host "For Cursor rules/skills/MCP, also run: scripts/bootstrap-cursor-repo.ps1"

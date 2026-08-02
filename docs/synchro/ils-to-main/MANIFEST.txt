@@ -1,0 +1,17 @@
+ils-delta-20260630.tar.gz  — contents (path / size):
+
+       40725  data/webster/webster_vi_-_side_letter_-_state_farm_mutual_automobile_insurance_company__execution_version___1_.docx
+       78519  data/issues/ASF
+       92543  data/changes/STATUS.md
+        2767  data/changes/sst-5404/qa_acceptance_criteria.md
+        8275  data/changes/sst-5404/sst-5404.md
+        7479  data/changes/sst-5404/_handover_to_cursor.md
+        5265  data/changes/sst-5404/_jira_ticket_draft.md
+       89146  data/error_loading/side_letters_26062026/BDC
+      223043  data/error_loading/side_letters_26062026/BDC
+        5265  data/error_loading/side_letters_26062026/_jira_ticket_draft.md
+      381112  data/error_loading/side_letters_29062026/Avista
+         163  data/error_loading/side_letters_29062026/comment
+      449195  data/error_loading/side_letters_29062026/image
+      664627  data/error_loading/side_letters_29062026/Niobrara
+       53728  data/error_loading/side_letters_29062026/OHCP
