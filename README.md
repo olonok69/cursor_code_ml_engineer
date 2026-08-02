@@ -1,8 +1,8 @@
 # Cursor — Curso en tres partes (presentación + guías)
 
-> **Volumen Claude Code:** [`README.md`](./README.md) · [`GUIA_PRESENTACION.md`](./GUIA_PRESENTACION.md) ·
-> [`GUIA_TECNICA.md`](./GUIA_TECNICA.md) · `presentacion/Claude_Code_Presentacion.pptx`.
-> Mismo curso, mismo método, otra herramienta — este documento es el **volumen Cursor**.
+> **Volumen Claude Code:** el curso hermano
+> [`claude_code_ml_engineer`](https://github.com/olonok69/claude_code_ml_engineer) —
+> mismo curso, mismo método, otra herramienta. Este repo es el **volumen Cursor**.
 
 Material para un **curso/workshop** sobre **Cursor**: una única presentación (`.pptx`) con **tres
 partes diferenciadas** y dos guías escritas, con ejemplos reales y ejecutables. En español, orientado a
@@ -24,44 +24,44 @@ ejemplos sanitizados, verificados contra `cursor.com/docs` (agosto 2026).
 
 | Archivo | Qué es |
 |---|---|
-| [`GUIA_PRESENTACION_CURSOR.md`](./GUIA_PRESENTACION_CURSOR.md) | Guía narrativa para el/la ponente, en dos partes: hilo a contar por slide + frases de cierre 🗣️ + links al código. |
-| [`GUIA_TECNICA_CURSOR.md`](./GUIA_TECNICA_CURSOR.md) | Referencia de implementación copy-paste (configs, comandos, código), en las mismas dos partes. |
-| [`presentacion_cursor/Cursor_Presentacion.pptx`](./presentacion_cursor/) | El deck (16:9, 36 slides), mismo estilo visual que el deck de Claude Code. |
-| [`presentacion_cursor/build_pptx_cursor.py`](./presentacion_cursor/build_pptx_cursor.py) | Generador del deck (regenerable). |
-| [`ejemplos_cursor/`](./ejemplos_cursor/) | Artefactos reales adaptados a Cursor, agrupados por sección del curso — mismo mapeo que [`ejemplos/`](./ejemplos/). |
+| [`GUIA_PRESENTACION.md`](./GUIA_PRESENTACION.md) | Guía narrativa para el/la ponente, en dos partes: hilo a contar por slide + frases de cierre 🗣️ + links al código. |
+| [`GUIA_TECNICA.md`](./GUIA_TECNICA.md) | Referencia de implementación copy-paste (configs, comandos, código), en las mismas dos partes. |
+| [`presentacion/Cursor_Presentacion.pptx`](./presentacion/) | El deck (16:9, 36 slides), mismo estilo visual que el deck de Claude Code. |
+| [`presentacion/build_pptx_cursor.py`](./presentacion/build_pptx_cursor.py) | Generador del deck (regenerable). |
+| [`ejemplos/`](./ejemplos/) | Artefactos reales adaptados a Cursor, agrupados por sección del curso — mismo mapeo que los ejemplos del [curso hermano de Claude Code](https://github.com/olonok69/claude_code_ml_engineer/tree/HEAD/ejemplos). |
 | [`docs/`](./docs/) | **Referencia**: documentos de una instalación real donde se aplica la metodología a diario (knowledge graph, adaptación a Cursor/Copilot, runbooks de sync). |
 
 ## Ejemplos (por sección del curso)
 
 **Parte 1:**
-- [`ejemplos_cursor/agents-md/`](./ejemplos_cursor/agents-md/) — el patrón de `AGENTS.md` + `.cursor/rules/` de dos niveles (§02).
-- [`ejemplos_cursor/context/`](./ejemplos_cursor/context/) — gestión del context window en Cursor: anatomía, mandos, higiene (§03).
-- [`ejemplos_cursor/prompt-caching/`](./ejemplos_cursor/prompt-caching/) — el mecanismo de caching (API Anthropic) + qué controlas de verdad en Cursor (§03).
-- [`ejemplos_cursor/mcp/`](./ejemplos_cursor/mcp/) — `.cursor/mcp.json` con scopes y secretos por entorno (§04).
-- [`ejemplos_cursor/skills-plugins/`](./ejemplos_cursor/skills-plugins/) — skills en `.cursor/skills/` (§05).
-- [`ejemplos_cursor/subagents/`](./ejemplos_cursor/subagents/) — plantillas de subagent y el diagrama subagent-vs-Background/Cloud Agent (§06).
-- [`ejemplos_cursor/hooks/`](./ejemplos_cursor/hooks/) — hooks reales de Cursor (`.cursor/hooks.json`, eventos, permission JSON) + payloads (§07).
-- [`ejemplos_cursor/automation/`](./ejemplos_cursor/automation/) — GitHub Action con Cursor, Cursor SDK, Automations (§07).
+- [`ejemplos/agents-md/`](./ejemplos/agents-md/) — el patrón de `AGENTS.md` + `.cursor/rules/` de dos niveles (§02).
+- [`ejemplos/context/`](./ejemplos/context/) — gestión del context window en Cursor: anatomía, mandos, higiene (§03).
+- [`ejemplos/prompt-caching/`](./ejemplos/prompt-caching/) — el mecanismo de caching (API Anthropic) + qué controlas de verdad en Cursor (§03).
+- [`ejemplos/mcp/`](./ejemplos/mcp/) — `.cursor/mcp.json` con scopes y secretos por entorno (§04).
+- [`ejemplos/skills-plugins/`](./ejemplos/skills-plugins/) — skills en `.cursor/skills/` (§05).
+- [`ejemplos/subagents/`](./ejemplos/subagents/) — plantillas de subagent y el diagrama subagent-vs-Background/Cloud Agent (§06).
+- [`ejemplos/hooks/`](./ejemplos/hooks/) — hooks reales de Cursor (`.cursor/hooks.json`, eventos, permission JSON) + payloads (§07).
+- [`ejemplos/automation/`](./ejemplos/automation/) — GitHub Action con Cursor, Cursor SDK, Automations (§07).
 
 **Parte 2:**
-- [`ejemplos_cursor/metodologia/`](./ejemplos_cursor/metodologia/) — **el flujo real de 11 etapas, un ejemplo concreto de principio a fin, la prevalencia de tools** (Serena/CodeGraph/Playwright/AWS/Docker/oráculo determinista), el **gate outbound de tres checks**, el **runbook de ops** (sincronizar el workspace entre máquinas, con las notas de adaptación a Cursor) y el diagrama del flujo (§08, §11).
-- [`ejemplos_cursor/gsd/`](./ejemplos_cursor/gsd/) · [`ejemplos_cursor/codegraph/`](./ejemplos_cursor/codegraph/) · [`ejemplos_cursor/serena/`](./ejemplos_cursor/serena/) — las herramientas del método en Cursor, en profundidad (§09).
+- [`ejemplos/metodologia/`](./ejemplos/metodologia/) — **el flujo real de 11 etapas, un ejemplo concreto de principio a fin, la prevalencia de tools** (Serena/CodeGraph/Playwright/AWS/Docker/oráculo determinista), el **gate outbound de tres checks**, el **runbook de ops** (sincronizar el workspace entre máquinas, con las notas de adaptación a Cursor) y el diagrama del flujo (§08, §11).
+- [`ejemplos/gsd/`](./ejemplos/gsd/) · [`ejemplos/codegraph/`](./ejemplos/codegraph/) · [`ejemplos/serena/`](./ejemplos/serena/) — las herramientas del método en Cursor, en profundidad (§09).
 - [`docs/ai-agents-code-methodology/`](./docs/ai-agents-code-methodology/) — el starter-kit portable: [`CURSOR_ADAPTATION.md`](./docs/ai-agents-code-methodology/CURSOR_ADAPTATION.md) + superficie lista para copiar en [`cursor/`](./docs/ai-agents-code-methodology/cursor/) (§10).
 - [`docs/synchro/`](./docs/synchro/) — runbooks reales de sincronización entre máquinas (§11).
 
 **Parte 3:**
 - [`docs/knowledge-graph/`](./docs/knowledge-graph/) — el grafo de conocimiento de tickets, construido con **graphify**: diseño (`design.md`), scripts (`kg_query.sh`, `kg_refresh.sh`, `build_manifest.py`, `stage_corpus.py`), tests, `manifest.txt` y la **salida real** (`output/graph.html` interactivo + `GRAPH_REPORT.md`) — el mismo artefacto que en el curso Claude Code (§12).
 - [`docs/KNOWLEDGE_GRAPH.md`](./docs/KNOWLEDGE_GRAPH.md) — el resumen narrativo del mismo sistema.
-- [`presentacion_cursor/kg_graph.png`](./presentacion_cursor/) — la captura del grafo usada en este deck (mismo grafo real del proyecto).
+- [`presentacion/kg_graph.png`](./presentacion/) — la captura del grafo usada en este deck (mismo grafo real del proyecto).
 
 ## Regenerar el deck y los diagramas
 
 ```bash
 pip install python-pptx pillow
-python presentacion_cursor/build_pptx_cursor.py       # -> presentacion_cursor/Cursor_Presentacion.pptx
-python ejemplos_cursor/metodologia/render_flow.py     # -> flow.png (flujo de 11 etapas)
-python ejemplos_cursor/subagents/render_agents.py     # -> agents.png (subagent vs Background/Cloud Agent)
-python presentacion/capture_kg_graph.py                # -> kg_graph.png (mismo grafo de tickets; requiere playwright)
+python presentacion/build_pptx_cursor.py       # -> presentacion/Cursor_Presentacion.pptx
+python ejemplos/metodologia/render_flow.py     # -> flow.png (flujo de 11 etapas)
+python ejemplos/subagents/render_agents.py     # -> agents.png (subagent vs Background/Cloud Agent)
+python presentacion/capture_kg_graph.py        # -> kg_graph.png (mismo grafo de tickets; requiere playwright)
 ```
 
 ## Documentación de las tecnologías

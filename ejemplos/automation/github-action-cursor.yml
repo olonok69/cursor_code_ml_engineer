@@ -40,4 +40,4 @@ jobs:
         env:
           CURSOR_API_KEY: ${{ secrets.CURSOR_API_KEY }}
           FILES: ${{ steps.diff.outputs.files }}
-        run: npx tsx ejemplos_cursor/automation/review.ts
+        run: npx tsx ejemplos/automation/review.ts

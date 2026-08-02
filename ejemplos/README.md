@@ -1,6 +1,7 @@
 # Ejemplos adaptados a Cursor
 
-Misma estructura que [`ejemplos/`](../ejemplos/) (curso Claude Code), reescrita para **Cursor**.
+Misma estructura que los [`ejemplos/`](https://github.com/olonok69/claude_code_ml_engineer/tree/HEAD/ejemplos)
+del curso hermano de Claude Code, reescrita para **Cursor**.
 La metodología y los roles de tools (CodeGraph, Serena, Playwright, graphify) se mantienen;
 cambia la *superficie* del producto (rules, skills, MCP, hooks, SDK).
 
