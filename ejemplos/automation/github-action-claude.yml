@@ -1,0 +1,31 @@
+# .github/workflows/claude-review.yml
+# Revisión de código automática con Claude Code en cada Pull Request.
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Claude review de los ficheros cambiados
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # Instalar Claude Code
+          curl -fsSL https://claude.ai/install.sh | bash
+          export PATH="$HOME/.local/bin:$PATH"
+
+          # Modo headless (-p): pasa el diff y pide una revisión de seguridad.
+          git diff origin/${{ github.base_ref }}...HEAD --name-only \
+            | claude -p "Revisa estos ficheros cambiados buscando bugs y problemas de seguridad. \
+                         Sé conciso y prioriza por severidad."

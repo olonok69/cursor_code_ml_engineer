@@ -1,0 +1,109 @@
+# Rename this file to bootstrap-cursor-repo.ps1 on the target machine before running.
+# Scaffolds .cursor/ rules, skills, MCP example, hooks, and AGENTS.md in the target repo.
+
+param(
+    [string]$RepoRoot = ".",
+    [string]$CodegraphPath = ""
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+$repo = (Resolve-Path $RepoRoot).Path
+$methodologyDir = Join-Path $repo "data/changes/ai-agent-methodology"
+$cursorSrc = Join-Path $methodologyDir "cursor"
+$templatesDir = Join-Path $methodologyDir "templates"
+$changesDir = Join-Path $repo "data/changes"
+
+if (-not (Test-Path $cursorSrc)) {
+    throw "Cursor pack not found: $cursorSrc"
+}
+
+$cursorDir = Join-Path $repo ".cursor"
+$rulesDir = Join-Path $cursorDir "rules"
+$skillsDir = Join-Path $cursorDir "skills"
+$hooksDir = Join-Path $cursorDir "hooks"
+
+New-Item -ItemType Directory -Force -Path $rulesDir, $skillsDir, $hooksDir, $changesDir | Out-Null
+
+function Copy-IfMissing {
+    param(
+        [string]$Source,
+        [string]$Destination
+    )
+    if (-not (Test-Path $Destination)) {
+        Copy-Item -Path $Source -Destination $Destination -Force
+        Write-Host "Created: $Destination"
+    }
+    else {
+        Write-Host "Exists:  $Destination (left unchanged)"
+    }
+}
+
+# Rules
+Get-ChildItem -Path (Join-Path $cursorSrc "rules") -Filter "*.mdc" | ForEach-Object {
+    Copy-IfMissing -Source $_.FullName -Destination (Join-Path $rulesDir $_.Name)
+}
+
+# Skills (directories)
+Get-ChildItem -Path (Join-Path $cursorSrc "skills") -Directory | ForEach-Object {
+    $destSkill = Join-Path $skillsDir $_.Name
+    if (-not (Test-Path $destSkill)) {
+        Copy-Item -Path $_.FullName -Destination $destSkill -Recurse -Force
+        Write-Host "Created: $destSkill"
+    }
+    else {
+        Write-Host "Exists:  $destSkill (left unchanged)"
+    }
+}
+
+# MCP
+$mcpExample = Join-Path $cursorSrc "mcp.json.example"
+$mcpDest = Join-Path $cursorDir "mcp.json"
+if (-not (Test-Path $mcpDest)) {
+    $mcpText = Get-Content -Path $mcpExample -Raw
+    $pathForMcp = if ($CodegraphPath) { $CodegraphPath } else { $repo }
+    # JSON-friendly path (forward slashes work on Windows for most tools)
+    $pathForMcp = ($pathForMcp -replace '\\', '/')
+    $mcpText = $mcpText -replace '__REPO_ROOT__', $pathForMcp
+    Set-Content -Path $mcpDest -Value $mcpText -NoNewline
+    Write-Host "Created: $mcpDest (CodeGraph --path = $pathForMcp)"
+}
+else {
+    Write-Host "Exists:  $mcpDest (left unchanged)"
+}
+
+# Hooks
+Copy-IfMissing -Source (Join-Path $cursorSrc "hooks.json.example") -Destination (Join-Path $cursorDir "hooks.json")
+Get-ChildItem -Path (Join-Path $cursorSrc "hooks") -File | ForEach-Object {
+    Copy-IfMissing -Source $_.FullName -Destination (Join-Path $hooksDir $_.Name)
+}
+
+# AGENTS.md at repo root
+Copy-IfMissing -Source (Join-Path $cursorSrc "AGENTS.md.example") -Destination (Join-Path $repo "AGENTS.md")
+
+# Working agreement + orientation under data/changes
+if (Test-Path $templatesDir) {
+    Copy-IfMissing -Source (Join-Path $templatesDir "CURSOR_WORKING_AGREEMENT_TEMPLATE.md") `
+        -Destination (Join-Path $changesDir "_cursor_working_agreement_template.md")
+    Copy-IfMissing -Source (Join-Path $templatesDir "ORIENTATION_TEMPLATE.md") `
+        -Destination (Join-Path $changesDir "_orientation_template.md")
+}
+
+# Ensure .codegraph/ ignored if .gitignore exists
+$gitignore = Join-Path $repo ".gitignore"
+if (Test-Path $gitignore) {
+    $gi = Get-Content $gitignore -Raw
+    if ($gi -notmatch '(?m)^\.codegraph/') {
+        Add-Content -Path $gitignore -Value "`n.codegraph/"
+        Write-Host "Updated: $gitignore (added .codegraph/)"
+    }
+}
+
+Write-Host ""
+Write-Host "Cursor bootstrap complete."
+Write-Host "Next:"
+Write-Host "  1. Review .cursor/mcp.json and reload Cursor."
+Write-Host "  2. Run: codegraph init"
+Write-Host "  3. Fill data/changes/STATUS.md + SHARP_EDGES.md + AGENTS.md contract section."
+Write-Host "  4. Read data/changes/ai-agent-methodology/CURSOR_ADAPTATION.md"

@@ -1,0 +1,17 @@
+ws-delta-20260630.tar.gz  — contents (path / size):
+
+       40725  data/clientp/clientp_vi_-_side_letter_-_investor_a__execution_version___1_.docx
+       78519  data/issues/ClientN
+       92543  data/changes/STATUS.md
+        2767  data/changes/tkt-102/qa_acceptance_criteria.md
+        8275  data/changes/tkt-102/tkt-102.md
+        7479  data/changes/tkt-102/_handover_to_cursor.md
+        5265  data/changes/tkt-102/_jira_ticket_draft.md
+       89146  data/error_loading/side_letters_26062026/ClientZ
+      223043  data/error_loading/side_letters_26062026/ClientZ
+        5265  data/error_loading/side_letters_26062026/_jira_ticket_draft.md
+      381112  data/error_loading/side_letters_29062026/ClientW
+         163  data/error_loading/side_letters_29062026/comment
+      449195  data/error_loading/side_letters_29062026/image
+      664627  data/error_loading/side_letters_29062026/ClientX
+       53728  data/error_loading/side_letters_29062026/ClientY

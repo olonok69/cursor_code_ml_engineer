@@ -1,0 +1,29 @@
+%% Fuente editable del diagrama agents.png (render: python render_agents.py)
+%% Izquierda: subagentes (contexto aislado, devuelven un resumen).
+%% Derecha: agent team (sesiones completas + task list compartida + mensajería).
+flowchart LR
+  subgraph S["SUBAGENTES (tool Task)"]
+    M["Sesión principal\n(tu contexto)"]
+    A1["Explore\n(read-only)"]
+    A2["Plan"]
+    A3["custom: .claude/agents/*.md\n(security-reviewer, refactor-scout)"]
+    M -- "prompt con contexto" --> A1
+    M -- " " --> A2
+    M -- " " --> A3
+    A1 -- "solo el RESUMEN vuelve" --> M
+    A2 -- " " --> M
+    A3 -- " " --> M
+  end
+  subgraph T["AGENT TEAM (experimental)"]
+    L["Lead\n(sesión completa)"]
+    T1["Teammate A\n(sesión completa)"]
+    T2["Teammate B\n(sesión completa)"]
+    TL[("Task list compartida\n~/.claude/tasks/<team>/")]
+    L <--> T1
+    L <--> T2
+    T1 <-- "mensajería directa\n(inboxes)" --> T2
+    L --- TL
+    T1 --- TL
+    T2 --- TL
+  end
+  S -. "aislar contexto, coste bajo" .- T

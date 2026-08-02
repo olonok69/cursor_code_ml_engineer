@@ -1,0 +1,16 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+*.pdf
+.env
+examples/
+# Nota: el .pptx generado SÍ se versiona (es un entregable).
+# Los ejemplos son material didáctico; sin secretos reales.
+#presentacion/build_pptx.py
+.codegraphy/*

@@ -1,0 +1,18 @@
+# Agent orientation (Cursor)
+
+This repository uses the **AI-agent methodology** (plan → agree → implement; verify at the consumer-visible contract; human owns external actions).
+
+## Read first every session
+
+1. Always-applied rules under `.cursor/rules/` (gates + tool order).
+2. Live snapshot: `data/changes/STATUS.md`.
+3. Danger zones: `data/changes/SHARP_EDGES.md`.
+4. Full pack: `data/changes/ai-agent-methodology/CURSOR_ADAPTATION.md`.
+
+## Do not load by default
+
+Per-ticket writeups, playbooks, and long history under `data/changes/<id>/` — open on demand only.
+
+## Output contract
+
+Define here (one paragraph): what downstream consumers actually observe (API JSON, UI field, event, artifact). All bugs are reproduced and verified against that surface.
