@@ -1,11 +1,11 @@
 # Cursor — Guía de presentación (curso en dos partes)
 
 > Guía narrativa para el curso/workshop. Está pensada para el/la **ponente**: cada sección mapea a un
-> bloque de slides del deck ([`presentacion_cursor/`](./presentacion_cursor/)) e incluye el hilo a contar,
+> bloque de slides del deck ([`presentacion/`](./presentacion/)) e incluye el hilo a contar,
 > los puntos clave y una frase de cierre 🗣️ lista para la diapositiva. Audiencia: **técnica /
 > desarrolladores**. Es el **volumen Cursor** del curso — contrapartida directa de
-> [`GUIA_PRESENTACION.md`](./GUIA_PRESENTACION.md) (Claude Code), misma estructura y numeración de
-> secciones.
+> [`GUIA_PRESENTACION.md`](https://github.com/olonok69/claude_code_ml_engineer/blob/HEAD/GUIA_PRESENTACION.md)
+> (Claude Code, repo hermano), misma estructura y numeración de secciones.
 >
 > El deck es **una sola presentación** con **tres partes diferenciadas**:
 > - **Parte 1 — Cursor:** la herramienta, del editor en tu escritorio a agentes en la nube.
@@ -17,7 +17,7 @@
 >   **mismo `SKILL.md`** y funcionan igual desde Cursor.
 >
 > El detalle de implementación (configs, código copy-paste) está en
-> [`GUIA_TECNICA_CURSOR.md`](./GUIA_TECNICA_CURSOR.md) y en [`ejemplos_cursor/`](./ejemplos_cursor/). La
+> [`GUIA_TECNICA.md`](./GUIA_TECNICA.md) y en [`ejemplos/`](./ejemplos/). La
 > carpeta [`docs/`](./docs/) es material de referencia de una instalación real donde se aplica la
 > metodología a diario.
 >
@@ -126,7 +126,7 @@ comandos y checklists.
 - **Nivel 2 (bajo demanda):** el detalle en ficheros que el agente lee solo cuando hace falta.
 - Regla *write-once*: cada dato se escribe en un único sitio; `AGENTS.md`/rules llevan el puntero, no la copia.
 - Mismo objetivo de recorte que en el proyecto Claude Code original (~73% sin perder información).
-  (Ejemplo sanitizado en [`ejemplos_cursor/agents-md/`](./ejemplos_cursor/agents-md/).)
+  (Ejemplo sanitizado en [`ejemplos/agents-md/`](./ejemplos/agents-md/).)
 
 **Rules — el mecanismo que no tiene equivalente 1:1 en `CLAUDE.md`:** ficheros `.mdc` con frontmatter
 (`description`, `globs`, `alwaysApply`) y **cuatro modos**: Always Apply, Apply Intelligently, Apply to
@@ -158,8 +158,8 @@ el progreso desde la web). Bugbot corre solo en cada PR, sin invocarlo.
 **Hilo:** Aquí está la sección que explica **por qué** el patrón de dos niveles de la sección anterior no
 es manía: el context window es el recurso que gobierna rendimiento **y** coste. Dos mitades: gestionarlo
 (context window) y entender qué se puede/no se puede controlar del caching en un producto que no expone
-la API directamente. Material: [`ejemplos_cursor/context/`](./ejemplos_cursor/context/) y
-[`ejemplos_cursor/prompt-caching/`](./ejemplos_cursor/prompt-caching/).
+la API directamente. Material: [`ejemplos/context/`](./ejemplos/context/) y
+[`ejemplos/prompt-caching/`](./ejemplos/prompt-caching/).
 
 ### 3a. Context window — el recurso que gobierna todo
 
@@ -199,7 +199,7 @@ es de la API de Anthropic — pero si automatizas con la **Cursor SDK** contra C
   vars de Claude Code (`ENABLE_PROMPT_CACHING_1H`, etc.), no existen aquí.
 
 Demo ejecutable con la API directa (para entender el mecanismo, no el producto):
-[`ejemplos_cursor/prompt-caching/cache_demo.py`](./ejemplos_cursor/prompt-caching/cache_demo.py).
+[`ejemplos/prompt-caching/cache_demo.py`](./ejemplos/prompt-caching/cache_demo.py).
 
 **El puente que une 3a y 3b (y adelanta la Parte 2):** contexto lean y estable **rinde mejor en cualquier
 producto**, aunque no veas el descuento en pantalla. Y la "prevalencia de tools" de la metodología
@@ -232,7 +232,7 @@ día), `playwright` (verificar la UI en un navegador real), `codegraph` (grafo d
 **Buenas prácticas:** secretos por variable de entorno (nunca en el JSON versionado); el server disponible
 ≠ tool permitida (`permissions.json` sigue controlando el acceso); y — enlaza con la sección 3 — **cada
 server suma contexto**: desactiva los que el proyecto no use. Config de ejemplo en
-[`ejemplos_cursor/mcp/`](./ejemplos_cursor/mcp/).
+[`ejemplos/mcp/`](./ejemplos/mcp/).
 
 **La distinción que hay que dejar clara:** los servers **no se instalan en `AGENTS.md`** — ese fichero es
 prompt, no configuración. `.cursor/mcp.json`/`~/.cursor/mcp.json` (o un pack del repo) dan la
@@ -274,7 +274,7 @@ es literalmente el **mismo fichero**.
 **Hilo:** La cuarta capa de extensibilidad: no *qué sabe hacer* Cursor, sino cuántos agentes trabajan y
 cómo se coordinan. Dos escalones: subagents nativos → paralelismo real con Background/Cloud Agents — y
 una ausencia deliberada que hay que nombrar: no hay Agent Teams. Todo el material en
-[`ejemplos_cursor/subagents/`](./ejemplos_cursor/subagents/).
+[`ejemplos/subagents/`](./ejemplos/subagents/).
 
 ### 6a. Subagents (nativo, Cursor 2.4+) — aislar contexto
 
@@ -321,7 +321,7 @@ aclaración en la sección 9).
 ## 7. Automatización
 
 **Hilo:** De hooks a agentes en la nube — del control determinista a la autonomía total. Todo en
-[`ejemplos_cursor/hooks/`](./ejemplos_cursor/hooks/) y [`ejemplos_cursor/automation/`](./ejemplos_cursor/automation/).
+[`ejemplos/hooks/`](./ejemplos/hooks/) y [`ejemplos/automation/`](./ejemplos/automation/).
 
 ### a) Hooks — el control determinista
 Un hook es un comando que se dispara en un evento del ciclo del agente. No le *pides* que se comporte:
@@ -337,7 +337,7 @@ lo **fuerzas**. Contrato:
 ### b) Headless / piping — `agent -p` en cualquier tubería (ver sección 1).
 
 ### c) CI/CD — Bugbot (nativo, revisión de PR sin script propio) o Cursor SDK en tu propio GitHub Action.
-   Ejemplo de workflow en [`ejemplos_cursor/automation/github-action-cursor.yml`](./ejemplos_cursor/automation/github-action-cursor.yml).
+   Ejemplo de workflow en [`ejemplos/automation/github-action-cursor.yml`](./ejemplos/automation/github-action-cursor.yml).
 
 ### d) Automations — cron + triggers de eventos:
 - **Automations** (distinto de Background/Cloud Agents) — programación por cron y disparo por eventos:
@@ -365,7 +365,7 @@ Con `cloud: { repos, autoCreatePR }` para que el agente abra PRs automáticament
 trabaja de verdad con un agente de coding en un proyecto en producción.** No es un flujo perfecto — es el
 que usamos, sujeto a revisión constante. Y es **agnóstico**: en este volumen se demuestra con Cursor, pero
 nació en Claude Code (sección 10 lo demuestra transfiriéndose entre ambos). Todo el material está en
-[`ejemplos_cursor/metodologia/`](./ejemplos_cursor/metodologia/) (sanitizado).
+[`ejemplos/metodologia/`](./ejemplos/metodologia/) (sanitizado).
 
 ### El principio
 > **El agente es un colaborador disciplinado, no un autopilot. La autonomía se gana por-decisión, no se
@@ -374,7 +374,7 @@ nació en Claude Code (sección 10 lo demuestra transfiriéndose entre ambos). T
 
 ### El flujo de 11 etapas
 
-![Flujo de trabajo con Cursor — 11 etapas](./ejemplos_cursor/metodologia/flow.png)
+![Flujo de trabajo con Cursor — 11 etapas](./ejemplos/metodologia/flow.png)
 
 Encadenadas por **gates** (los recuadros coral del diagrama); un gate rojo es un STOP = *no escribir código*:
 
@@ -403,9 +403,9 @@ Encadenadas por **gates** (los recuadros coral del diagrama); un gate rojo es un
 > inferencia**, pero el agente **lee** esos hechos, **razona** y **decide** — y eso cuesta. El método no
 > elimina el coste, lo **concentra**: barato en 1–3 y 9 (leer hechos + decidir), **caro en 5–6–7** (plan,
 > código, verify), donde el modelo *piensa y crea*. Tabla coste-por-etapa:
-> [`metodologia/WORKFLOW.md`](./ejemplos_cursor/metodologia/WORKFLOW.md).
+> [`metodologia/WORKFLOW.md`](./ejemplos/metodologia/WORKFLOW.md).
 
-### Un ejemplo real (ver [`metodologia/EJEMPLO_REAL.md`](./ejemplos_cursor/metodologia/EJEMPLO_REAL.md))
+### Un ejemplo real (ver [`metodologia/EJEMPLO_REAL.md`](./ejemplos/metodologia/EJEMPLO_REAL.md))
 Mismo caso sanitizado que en el curso Claude Code; el agente orquestador es **Cursor**. Bug: *"un campo
 sale vacío en la UI pero está en el PDF."* → Orientar (skill `kg` encuentra un `SHARP_EDGE` que restringe
 el fix) → confirmar el vacío en el JSON del contrato (Playwright) → pre-existente, no regresión →
@@ -425,7 +425,7 @@ izquierda → se añade el test y va al `PLAYBOOK`.
 **Hilo:** El flujo dice *qué* hacer; esta sección dice **con qué tool y en qué orden** — y qué hace cada
 una. En Cursor, la regla vive en `.cursor/rules/01-tool-prevalence.mdc`: no basta con "tener el MCP
 instalado", el agente debe tirar de la tool correcta **automáticamente**. Detalle:
-[`metodologia/herramientas.md`](./ejemplos_cursor/metodologia/herramientas.md).
+[`metodologia/herramientas.md`](./ejemplos/metodologia/herramientas.md).
 
 ### La prevalencia: barato → caro, determinista → probabilístico
 
@@ -453,16 +453,16 @@ antes de renombrar/borrar (desambigua por clase); grep/Read solo para literales.
 
 ### Qué es cada herramienta (una frase cada una)
 
-- **CodeGraph** ([`ejemplos_cursor/codegraph/`](./ejemplos_cursor/codegraph/)) — índice tree-sitter→SQLite
+- **CodeGraph** ([`ejemplos/codegraph/`](./ejemplos/codegraph/)) — índice tree-sitter→SQLite
   **local, sin API keys**, vía MCP; una consulta (`codegraph_explore`) devuelve fuente + rutas de llamada
   + blast radius + **flags de cobertura de tests** (58% menos tool calls en sus benchmarks). Es el
   **primer** tool de navegación; se registra en `.cursor/mcp.json` (no con `claude mcp add`). Fases:
   **investigar/navegar**.
-- **Serena** ([`ejemplos_cursor/serena/`](./ejemplos_cursor/serena/)) — navegación **semántica vía LSP**
+- **Serena** ([`ejemplos/serena/`](./ejemplos/serena/)) — navegación **semántica vía LSP**
   (MCP): símbolos, no texto. `find_referencing_symbols` desambigua métodos homónimos por clase — el
   chequeo **preciso** que el `impact` plano de CodeGraph no da. Complementarios, no rivales. Fases:
   **investigar → implementar** (pre-rename/borrado).
-- **GSD** ([`ejemplos_cursor/gsd/`](./ejemplos_cursor/gsd/)) — el método **hecho tooling**, pero **solo
+- **GSD** ([`ejemplos/gsd/`](./ejemplos/gsd/)) — el método **hecho tooling**, pero **solo
   existe en Claude Code hoy**: ciclo *discutir → planificar → ejecutar → verificar* con subagentes
   (`gsd-planner`, `gsd-executor`, `gsd-verifier`…). **No hay port oficial a Cursor.** El equivalente
   práctico aquí: **Plan mode** para el gate discuss→plan, la skill `methodology-plan` para rellenar la
@@ -476,7 +476,7 @@ antes de renombrar/borrar (desambigua por clase); grep/Read solo para literales.
   la tirada del agente (fase **investigar**). **No son skills ni tools MCP:** son **código suelto** que el
   agente teclea y corre con Shell, gitignored bajo `data/changes/<ticket>/` (frente a `kg`/Serena/CodeGraph,
   que sí son capacidades registradas). Detalle:
-  [`metodologia/herramientas.md`](./ejemplos_cursor/metodologia/herramientas.md).
+  [`metodologia/herramientas.md`](./ejemplos/metodologia/herramientas.md).
 
 🗣️ *"La inversión clásica — tirar del modelo para diagnosticar — es justo lo que este orden evita: el modelo verifica; los oráculos diagnostican."*
 
@@ -538,7 +538,7 @@ completo con RED → GREEN + contrato**.
 
 **Hilo:** Los mismos principios de la metodología aplicados a **ops**: mover el workspace entre la máquina
 principal y el portátil con un runbook real (ver
-[`metodologia/machine-sync.md`](./ejemplos_cursor/metodologia/machine-sync.md)). El runbook original nació
+[`metodologia/machine-sync.md`](./ejemplos/metodologia/machine-sync.md)). El runbook original nació
 en un entorno **Claude Code** — los principios (sync asimétrica, agente con guardrails, evidencia, humano
 en lo externo) aplican igual en Cursor; lo que cambia es la superficie:
 

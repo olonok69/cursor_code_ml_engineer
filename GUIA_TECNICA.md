@@ -1,10 +1,11 @@
 # Cursor — Guía técnica de implementación (curso en dos partes)
 
 > Referencia copy-paste para montar cada pieza. Complementa a
-> [`GUIA_PRESENTACION_CURSOR.md`](./GUIA_PRESENTACION_CURSOR.md) (el hilo narrativo) con el **cómo**.
-> Todos los artefactos ejecutables están en [`ejemplos_cursor/`](./ejemplos_cursor/);
+> [`GUIA_PRESENTACION.md`](./GUIA_PRESENTACION.md) (el hilo narrativo) con el **cómo**.
+> Todos los artefactos ejecutables están en [`ejemplos/`](./ejemplos/);
 > [`docs/`](./docs/) es referencia de una instalación real. Volumen Claude Code:
-> [`GUIA_TECNICA.md`](./GUIA_TECNICA.md) — misma estructura y numeración de secciones.
+> [`GUIA_TECNICA.md`](https://github.com/olonok69/claude_code_ml_engineer/blob/HEAD/GUIA_TECNICA.md)
+> (repo hermano) — misma estructura y numeración de secciones.
 >
 > **Nota de verificación:** el contenido específico de Cursor (Skills, Marketplace, Subagents, CLI
 > headless, hooks, SDK…) se verificó contra `docs.cursor.com` en agosto de 2026. Cursor cambia rápido —
@@ -90,7 +91,7 @@ PRIMERO. @../data/changes/SHARP_EDGES.md
 ```
 Recomendado: partir gates en varios `.mdc` (1 concern por regla, <50 líneas), no un único fichero enorme.
 
-### Patrón de dos niveles (ver [`ejemplos_cursor/agents-md/`](./ejemplos_cursor/agents-md/))
+### Patrón de dos niveles (ver [`ejemplos/agents-md/`](./ejemplos/agents-md/))
 - **Nivel 1** = `AGENTS.md` + rules `alwaysApply` siempre cargados: orientación + punteros de una línea.
   Pequeño.
 - **Nivel 2** = ficheros bajo `data/changes/` (`STATUS.md`, `PLAYBOOK.md`, `SHARP_EDGES.md`,
@@ -157,7 +158,7 @@ superficies interactivas; Bugbot corre solo, sin invocarlo.
 
 ## 5. Context window
 
-Referencia completa: [`ejemplos_cursor/context/`](./ejemplos_cursor/context/). Lo que carga la sesión
+Referencia completa: [`ejemplos/context/`](./ejemplos/context/). Lo que carga la sesión
 antes de tu primer prompt: system/agent prompt (oculto, siempre primero) · rules `alwaysApply` +
 `AGENTS.md` (lo controlas tú) · Memories si las hay (sistema distinto — revisa qué se coló) · índice de
 tools MCP · luego conversación, ficheros leídos, output de comandos (crece cada turno).
@@ -181,8 +182,8 @@ tools MCP · luego conversación, ficheros leídos, output de comandos (crece ca
 ## 6. Prompt caching
 
 Referencia y demo ejecutable (API de Anthropic, para entender el mecanismo — no expuesto como tal en el
-producto Cursor): [`ejemplos_cursor/prompt-caching/`](./ejemplos_cursor/prompt-caching/)
-([`cache_demo.py`](./ejemplos_cursor/prompt-caching/cache_demo.py)).
+producto Cursor): [`ejemplos/prompt-caching/`](./ejemplos/prompt-caching/)
+([`cache_demo.py`](./ejemplos/prompt-caching/cache_demo.py)).
 
 **Mecánica (API):** se cachea un **prefijo contiguo** hasta un breakpoint `cache_control`; jerarquía
 estricta `Tools → System → Messages` (un cambio invalida su nivel y los siguientes).
@@ -211,7 +212,7 @@ MCP activos (bloque de tools estable); `/clear` entre tareas no relacionadas. Si
 
 ## 7. MCP
 
-Ver [`ejemplos_cursor/mcp/mcp.json.example`](./ejemplos_cursor/mcp/mcp.json.example). Scopes: **project**
+Ver [`ejemplos/mcp/mcp.json.example`](./ejemplos/mcp/mcp.json.example). Scopes: **project**
 (`.cursor/mcp.json`, versionado) y **user** (`~/.cursor/mcp.json`, editable directamente o vía Settings →
 MCP).
 
@@ -233,7 +234,7 @@ Tras editar: **recarga/reinicia Cursor** — no hay hot-reload. Las tools MCP se
 > `~/.cursor/mcp.json` (o los trae un pack del repo). Pero instalar Serena solo hace que *exista* la tool;
 > que el agente **tire de ella sin pedirlo** lo consigue una rule con un *trigger map*: "CodeGraph ANTES de
 > leer ficheros enteros; `find_referencing_symbols` SIEMPRE antes de un rename". Es la regla de prevalencia
-> de [`metodologia/herramientas.md`](./ejemplos_cursor/metodologia/herramientas.md) — la config convierte
+> de [`metodologia/herramientas.md`](./ejemplos/metodologia/herramientas.md) — la config convierte
 > "no tengo la tool" en "la tengo"; la rule convierte "la tengo" en "se usa en el orden correcto".
 
 ---
@@ -256,20 +257,20 @@ rules, desde la UI del producto. No hay comando `/plugin install`.
 .cursor/skills/sanitise-diff/SKILL.md
 .cursor/skills/methodology-plan/SKILL.md
 ```
-Ejemplos reales de skills de proyecto: [`ejemplos_cursor/skills-plugins/.cursor/skills/`](./ejemplos_cursor/skills-plugins/.cursor/skills/)
+Ejemplos reales de skills de proyecto: [`ejemplos/skills-plugins/.cursor/skills/`](./ejemplos/skills-plugins/.cursor/skills/)
 (`audit`, `deploy-staging`). Pack de metodología con las cuatro skills anteriores:
 [`docs/ai-agents-code-methodology/cursor/skills/`](./docs/ai-agents-code-methodology/cursor/skills/).
 
 > **Lo que YA NO es una brecha frente a Claude Code (agosto 2026):** cuando se escribió la primera guía de
 > adaptación no existían ni Skills ni Marketplace en Cursor — la tabla "qué NO está" de
-> [`ejemplos_cursor/README.md`](./ejemplos_cursor/README.md) refleja ese snapshot antiguo en algunas filas.
+> [`ejemplos/README.md`](./ejemplos/README.md) refleja ese snapshot antiguo en algunas filas.
 > Revisa `docs.cursor.com` antes de asumir que algo "no tiene equivalente".
 
 ---
 
 ## 9. Subagents
 
-Referencia completa + diagrama: [`ejemplos_cursor/subagents/`](./ejemplos_cursor/subagents/).
+Referencia completa + diagrama: [`ejemplos/subagents/`](./ejemplos/subagents/).
 
 **Nativo (Cursor 2.4+):** delegación tipo Task, contexto **aislado** por subagent — a la sesión principal
 vuelve solo el resumen. Se invoca por lenguaje natural o `/nombre`; ejecución en paralelo para trabajo
@@ -279,12 +280,12 @@ actual.
 **No hay `.claude/agents/*.md` equivalente.** El patrón que funciona: una **plantilla de prompt**
 (opcionalmente respaldada por una skill), guardada como referencia y pegada al lanzar el subagent:
 ```text
-# ejemplos_cursor/subagents/prompts/refactor-scout.md
+# ejemplos/subagents/prompts/refactor-scout.md
 Actúa como refactor-scout: usa CodeGraph `codegraph_explore` y LUEGO Serena
 `find_referencing_symbols` antes de proponer el rename. Desambigua por clase.
 ```
-Ejemplos reales: [`security-reviewer`](./ejemplos_cursor/subagents/prompts/security-reviewer.md) ·
-[`refactor-scout`](./ejemplos_cursor/subagents/prompts/refactor-scout.md) (codifica la regla
+Ejemplos reales: [`security-reviewer`](./ejemplos/subagents/prompts/security-reviewer.md) ·
+[`refactor-scout`](./ejemplos/subagents/prompts/refactor-scout.md) (codifica la regla
 CodeGraph→Serena de la Parte 2). **Gotcha:** el subagent no hereda tu conversación — contexto en el prompt
 de lanzamiento.
 
@@ -304,7 +305,7 @@ rama/fichero antes de lanzar; un humano (o el agente principal) integra resultad
 
 ## 10. Hooks
 
-Todo en [`ejemplos_cursor/hooks/`](./ejemplos_cursor/hooks/). Config en `.cursor/hooks.json` (proyecto) o
+Todo en [`ejemplos/hooks/`](./ejemplos/hooks/). Config en `.cursor/hooks.json` (proyecto) o
 `~/.cursor/hooks.json` (usuario):
 
 ```jsonc
@@ -338,9 +339,9 @@ if ((p.path || "").includes(".env")) {
 console.log(JSON.stringify({ permission: "allow" }));
 process.exit(0);
 ```
-Payloads reales: [`pre-log.json`](./ejemplos_cursor/hooks/pre-log.json),
-[`post-log.json`](./ejemplos_cursor/hooks/post-log.json). Ejemplo de veto de handoff:
-[`block_external.js`](./ejemplos_cursor/hooks/block_external.js) (`beforeShellExecution` para vetar
+Payloads reales: [`pre-log.json`](./ejemplos/hooks/pre-log.json),
+[`post-log.json`](./ejemplos/hooks/post-log.json). Ejemplo de veto de handoff:
+[`block_external.js`](./ejemplos/hooks/block_external.js) (`beforeShellExecution` para vetar
 push/PR/deploy salvo petición explícita) — también en
 [`docs/ai-agents-code-methodology/cursor/hooks/block-external-git.ps1`](./docs/ai-agents-code-methodology/cursor/hooks/block-external-git.ps1).
 
@@ -348,7 +349,7 @@ push/PR/deploy salvo petición explícita) — también en
 
 ## 11. Automatización
 
-Ver [`ejemplos_cursor/automation/`](./ejemplos_cursor/automation/).
+Ver [`ejemplos/automation/`](./ejemplos/automation/).
 
 **Headless / piping:**
 ```bash
@@ -357,7 +358,7 @@ git diff main --name-only | agent -p "revisa por seguridad"
 ```
 
 **CI/CD:** **Bugbot** (nativo, revisión de PR sin script propio) o Cursor SDK en tu propio GitHub Action —
-ver [`github-action-cursor.yml`](./ejemplos_cursor/automation/github-action-cursor.yml).
+ver [`github-action-cursor.yml`](./ejemplos/automation/github-action-cursor.yml).
 
 **Automations** (distinto de Background/Cloud Agents) — cron + triggers de eventos: Slack, Linear, PR
 merged, PagerDuty. Los **Background/Cloud Agents** (`cursor.com/agents`) son para trabajo async bajo
@@ -374,8 +375,8 @@ for await (const ev of run.stream()) {
 }
 ```
 Para que el agente trabaje en la nube y abra el PR él mismo: `Agent.create({ cloud: { repos, autoCreatePR: true } })`.
-Ejemplo completo: [`sdk.ts`](./ejemplos_cursor/automation/sdk.ts) ·
-[`review.ts`](./ejemplos_cursor/automation/review.ts) (revisión automática de PR con la SDK).
+Ejemplo completo: [`sdk.ts`](./ejemplos/automation/sdk.ts) ·
+[`review.ts`](./ejemplos/automation/review.ts) (revisión automática de PR con la SDK).
 
 > **Ojo con la API:** no es `Agent.prompt()` — es `Agent.create()` seguido de `agent.send()` y
 > `run.stream()`. Verifica la firma exacta contra `docs.cursor.com/background-agent/api` antes de dar
@@ -388,9 +389,9 @@ Ejemplo completo: [`sdk.ts`](./ejemplos_cursor/automation/sdk.ts) ·
 ## 12. Metodología
 
 Todo el material profundo (flujo de 11 etapas, ejemplo real end-to-end, prevalencia de tools) está en
-[`ejemplos_cursor/metodologia/`](./ejemplos_cursor/metodologia/). Resumen:
+[`ejemplos/metodologia/`](./ejemplos/metodologia/). Resumen:
 
-### El flujo real (ver [`metodologia/WORKFLOW.md`](./ejemplos_cursor/metodologia/WORKFLOW.md))
+### El flujo real (ver [`metodologia/WORKFLOW.md`](./ejemplos/metodologia/WORKFLOW.md))
 Agente = colaborador disciplinado; la autonomía se gana por-decisión. 11 etapas encadenadas por **gates
 deterministas**: orientar (skill `kg` + history+status) → triaje inbound en el **contrato de salida** →
 regresión vs pre-existente → investigar con **oráculo determinista** (antes de la tirada de pago) →
@@ -399,9 +400,9 @@ regresión vs pre-existente → investigar con **oráculo determinista** (antes 
 líneas añadidas) → handoff (el agente **no** hace push/PR/deploy salvo petición explícita — hook
 `beforeShellExecution`/rules; el humano lo hace) → revisión Bugbot + persistir (skill `kg-refresh` si
 aplica).
-Diagrama: [`metodologia/flow.png`](./ejemplos_cursor/metodologia/flow.png) (fuente `flow.mmd`, render
+Diagrama: [`metodologia/flow.png`](./ejemplos/metodologia/flow.png) (fuente `flow.mmd`, render
 `render_flow.py`). Caso concreto de principio a fin:
-[`metodologia/EJEMPLO_REAL.md`](./ejemplos_cursor/metodologia/EJEMPLO_REAL.md).
+[`metodologia/EJEMPLO_REAL.md`](./ejemplos/metodologia/EJEMPLO_REAL.md).
 
 > **El gate outbound son tres checks** (no solo "los tests pasan"): (1) reproducir en la **etapa real de
 > salida** —el *wrapper* que reconstruye el contrato, no una función interna `extract()`—; (2) el JSON
@@ -409,7 +410,7 @@ Diagrama: [`metodologia/flow.png`](./ejemplos_cursor/metodologia/flow.png) (fuen
 > imagen del runtime, montar el `src`, re-correr). Los tests en verde no son prueba de lo que se despliega.
 > Idéntico en rol al gate de Claude Code — cambia solo qué agente lo ejecuta.
 
-### Prevalencia de tools (ver [`metodologia/herramientas.md`](./ejemplos_cursor/metodologia/herramientas.md))
+### Prevalencia de tools (ver [`metodologia/herramientas.md`](./ejemplos/metodologia/herramientas.md))
 Las rules `.cursor/rules/` y `AGENTS.md` no solo dicen *qué* hacer, sino **con qué tool y en qué orden**
 (barato→caro, determinista→probabilístico):
 ```
@@ -433,7 +434,7 @@ Claude Code: allowlist hand-curated en `settings.local.json` (`mcp__serena__…`
 
 ## 13. Herramientas del método
 
-### CodeGraph ([`ejemplos_cursor/codegraph/`](./ejemplos_cursor/codegraph/)) — inteligencia de código local (vía MCP)
+### CodeGraph ([`ejemplos/codegraph/`](./ejemplos/codegraph/)) — inteligencia de código local (vía MCP)
 Índice tree-sitter → SQLite en `.codegraph/` (sin API keys). Devuelve símbolos + rutas de llamada +
 blast radius + **flags de cobertura de tests**. Benchmarks: 58% menos tool calls, 22% más rápido.
 ```bash
@@ -450,7 +451,7 @@ Es el **primer** tool de navegación (antes que grep/Read); trata la fuente que 
 `codegraph_explore` no necesita `projectPath`; pásalo solo para consultar **otro** repo indexado. En WSL2
 `/mnt` el watcher puede perder cambios → `codegraph sync` tras editar.
 
-### Serena ([`ejemplos_cursor/serena/`](./ejemplos_cursor/serena/)) — navegación semántica vía LSP (MCP)
+### Serena ([`ejemplos/serena/`](./ejemplos/serena/)) — navegación semántica vía LSP (MCP)
 ```jsonc
 // .cursor/mcp.json
 { "mcpServers": { "serena": { "command": "uvx", "args": ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"] } } }
@@ -458,10 +459,10 @@ Es el **primer** tool de navegación (antes que grep/Read); trata la fuente que 
 Tools clave: `find_symbol` (con `body=true`), `get_symbols_overview`, `search_for_pattern`, y sobre todo
 **`find_referencing_symbols`** — el chequeo **preciso** antes de renombrar/borrar: desambigua métodos
 homónimos por clase, donde el `impact` plano de CodeGraph los mezcla. Complementa a CodeGraph, no lo
-sustituye. La plantilla [`refactor-scout`](./ejemplos_cursor/subagents/prompts/refactor-scout.md)
+sustituye. La plantilla [`refactor-scout`](./ejemplos/subagents/prompts/refactor-scout.md)
 empaqueta el orden CodeGraph→Serena→grep como procedimiento de subagent.
 
-### GSD ([`ejemplos_cursor/gsd/`](./ejemplos_cursor/gsd/)) — el método hecho tooling, **solo en Claude Code**
+### GSD ([`ejemplos/gsd/`](./ejemplos/gsd/)) — el método hecho tooling, **solo en Claude Code**
 Ciclo por fases con estado versionado en `.planning/` y subagentes especializados (`gsd-planner`,
 `gsd-plan-checker`, `gsd-executor`, `gsd-code-reviewer`, `gsd-verifier`, `gsd-phase-researcher`) — **no
 hay port oficial a Cursor**.
@@ -536,7 +537,7 @@ contrato de salida · comandos de test scoped · un issue completo con RED→GRE
 ## 15. Sincronización de máquinas
 
 Procedimiento real (sanitizado) que aplica los mismos principios a una tarea de ops
-(ver [`metodologia/machine-sync.md`](./ejemplos_cursor/metodologia/machine-sync.md);
+(ver [`metodologia/machine-sync.md`](./ejemplos/metodologia/machine-sync.md);
 runbooks de la instalación real en [`docs/synchro/`](./docs/synchro/)). El runbook original nació en
 Claude Code — la tabla de adaptación:
 ```
@@ -646,7 +647,7 @@ del agente; los bookends son deterministas.
 
 - [`graph.html`](./docs/knowledge-graph/output/graph.html) — visualización **vis-network interactiva**:
   búsqueda de nodos, panel de info, filtro por comunidad. La captura para el deck se regenera con
-  [`presentacion/capture_kg_graph.py`](./presentacion/capture_kg_graph.py) → `presentacion_cursor/kg_graph.png`
+  [`presentacion/capture_kg_graph.py`](./presentacion/capture_kg_graph.py) → `presentacion/kg_graph.png`
   (mismo grafo real, reutilizado sin cambios entre los dos volúmenes del curso).
 - `graph.json` — NetworkX node-link; aristas **tipadas** (`relation`) con `confidence`
   (`EXTRACTED`/`INFERRED` + score). Es lo que lee `kg_query.sh`.
