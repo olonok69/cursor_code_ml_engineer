@@ -1,104 +1,71 @@
-# Subagents y Agent Teams
+# Subagents (Task) en Cursor — y qué pasa con Agent Teams
 
-Cómo escalar Claude Code de *un* agente a *varios*: subagentes con contexto aislado dentro de tu sesión,
-y equipos de agentes (experimental) que colaboran como sesiones independientes. Este es el material de la
-sección **Subagents & Agent Teams** de la Parte 1 (ver [`GUIA_PRESENTACION.md`](../../GUIA_PRESENTACION.md)).
+Cómo escalar de *un* agente a *varios* en Cursor: la tool **Task** lanza subagentes con contexto
+aislado. El diagrama original del curso sigue siendo útil conceptualmente:
 
 ![Subagents vs Agent Teams](./agents.png)
+
+> **Agent Teams de Claude Code (lead + teammates + inbox compartido) NO existen en Cursor.**
+> Usa Task en paralelo + skills para roles. No intentes portar `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS`.
 
 ---
 
 ## 1. Subagentes con la tool `Task` (built-in)
 
-Claude puede lanzar **subagentes** con su propio context window: la investigación sucede "fuera" y solo el
-**resultado final** vuelve a tu conversación. Tipos integrados (no requieren definición):
-
-| Agente | Para qué |
+| Tipo Cursor (aprox.) | Para qué |
 |---|---|
-| `Explore` | Búsqueda read-only por el codebase (no puede editar) |
-| `Plan` | Diseñar una estrategia de implementación |
-| `general-purpose` | Tareas multi-paso genéricas; todos los tools |
+| `explore` | Búsqueda read-only por el codebase |
+| `generalPurpose` | Tareas multi-paso genéricas |
+| `shell` | Trabajo centrado en comandos |
+| Otros (ci-investigator, etc.) | Según el producto / skills del entorno |
 
-La razón de ser es **aislamiento de contexto**: un side-quest de investigación (leer 15 ficheros, probar
-hipótesis) inundaría tu sesión; en un subagente, ese ruido muere con él y a ti te llega un resumen.
+La razón de ser es la misma: **aislamiento de contexto**. Un side-quest que lee 15 ficheros no debe
+inundar tu hilo; el subagente muere y te deja un resumen.
 
-Invocación: Claude los usa solo cuando la tarea encaja, o se lo pides explícitamente
-(*"usa un agente Explore para localizar dónde se valida el token"*). Lanza varios **en paralelo** para
-trabajo independiente.
+Pídeselo en natural language (*"lanza un explore agent para localizar dónde se valida el token"*) o el
+orquestador lo hará cuando encaje. Varios en **paralelo** si el trabajo es independiente.
 
-## 2. Subagentes custom — `.claude/agents/<nombre>.md`
+## 2. “Subagentes custom” — cómo se adaptan
 
-Un subagente custom es un Markdown con frontmatter. Scopes: `~/.claude/agents/` (usuario, todos tus
-proyectos) o `.claude/agents/` (proyecto, versionado). El comando `/agents` lista los definidos.
+En Claude Code: `.claude/agents/<nombre>.md` con frontmatter (`tools`, `model`, …).
 
-```yaml
----
-name: security-reviewer
-description: Revisa código en busca de vulnerabilidades. Úsalo tras cambios en auth, input handling o deps.
-tools: Read, Grep, Glob, Bash        # allowlist propio (omitir = hereda todos)
-model: opus                           # override opcional de modelo
----
-Eres un ingeniero de seguridad senior. Revisa el código buscando:
-- Inyección (SQL, XSS, command injection)
-- Fallos de autenticación/autorización
-- Secretos hardcodeados
-Reporta cada hallazgo con fichero:línea, severidad y fix sugerido.
-```
+En Cursor **no hay ese fichero de agent type**. Opciones prácticas:
 
-Campos del frontmatter: `name`, `description` (guía la **auto-selección**, como en las skills), `tools`
-(lista separada por comas), `model`, `background`. Ejemplos reales en
-[`.claude/agents/`](./.claude/agents/): un [`security-reviewer`](./.claude/agents/security-reviewer.md) y un
-[`refactor-scout`](./.claude/agents/refactor-scout.md) que codifica la regla CodeGraph→Serena de la metodología.
-
-**Gotcha clave:** el subagente **no hereda** tu conversación ni el contenido ya cargado — dale el contexto
-necesario en el prompt de lanzamiento. Desde v2.1.198 corren en **background** por defecto (Claude los
-bloquea solo cuando necesita el resultado para continuar).
-
-## 3. Agent Teams (experimental)
-
-Los subagentes reportan solo al agente principal. Un **agent team** va más allá: varias sesiones
-independientes de Claude Code — un **lead** + **teammates** — con una **task list compartida** y
-**mensajería directa** entre ellos (pueden debatirse hallazgos, no solo reportar hacia arriba).
-
-```jsonc
-// ~/.claude/settings.json — activar (experimental, off por defecto)
-{ "env": { "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1" },
-  "teammateMode": "in-process" }     // o "auto" | "tmux" | "iterm2" (split panes)
-```
-
-Arquitectura (todo bajo `~/.claude/`):
-- `teams/<team>/config.json` — config del equipo (auto-generada)
-- `tasks/<team>/` — la task list compartida (sobrevive a un resume)
-- `teams/<team>/inboxes/<agente>.json` — el buzón de cada agente
-
-Se usa en lenguaje natural: *"monta un equipo con un architect y dos implementers para refactorizar el
-módulo de auth; exige aprobación de plan antes de tocar código"*. Los roles pueden reutilizar tus
-subagentes custom (*"un teammate usando el agent type security-reviewer"*).
-
-**Limitaciones actuales** (por eso es experimental): sin `/resume`/`/rewind` para teammates in-process;
-sin equipos anidados; un equipo por sesión; el modo split-panes requiere tmux o iTerm2; y **cuesta más**
-(cada teammate es una sesión completa, no un resumen).
-
-## 4. ¿Subagente o team? — la decisión
-
-| | **Subagente** | **Agent team** |
+| Enfoque | Dónde | Cuándo |
 |---|---|---|
-| Contexto | Aislado; devuelve un **resumen** al principal | Cada teammate = **sesión completa** propia |
-| Comunicación | Solo resultado final → principal | Task list compartida + mensajes entre teammates |
-| Coste | Bajo (lo caro muere con el subagente) | Alto (N sesiones en paralelo) |
-| Ideal para | Side-quests: investigar, explorar, verificar | Trabajo paralelo real: revisión multi-capa, hipótesis en competencia |
-| Config | Nada (built-ins) o `.claude/agents/*.md` | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` |
+| **Skill** con el procedimiento | `.cursor/skills/<rol>/SKILL.md` | Auto-selección por `description` |
+| **Plantilla de prompt** para Task | Esta carpeta [`prompts/`](./prompts/) | Pegar al lanzar un Task |
+| **Rule** que diga “antes de rename, Task con rol refactor-scout” | `.cursor/rules/` | Forzar el hábito |
 
-Reglas prácticas: empieza con 3–5 teammates; **particiona los ficheros** (cada teammate es dueño de los
-suyos — dos sesiones editando el mismo fichero = conflicto); y da a cada uno el contexto completo en su
-prompt de arranque, porque no heredan nada.
+Ejemplos portados:
 
-**Conexión con la metodología (Parte 2):** GSD aplica exactamente este patrón — sus `gsd-planner`,
-`gsd-executor`, `gsd-verifier` son subagentes custom empaquetados en un plugin (ver [`../gsd/`](../gsd/)).
+- [`prompts/security-reviewer.md`](./prompts/security-reviewer.md)
+- [`prompts/refactor-scout.md`](./prompts/refactor-scout.md)
+- Skills equivalentes opcionales: copia el cuerpo a `.cursor/skills/…` si quieres auto-invoke.
 
----
+**Gotcha:** el subagente **no hereda** tu conversación — dale contexto en el prompt de lanzamiento.
 
-Docs: [sub-agents](https://code.claude.com/docs/en/sub-agents) ·
-[agent-teams](https://code.claude.com/docs/en/agent-teams) ·
-[agents en paralelo](https://code.claude.com/docs/en/agents).
-El diagrama `agents.png` se regenera con `python render_agents.py` (fuente editable: `agents.mmd`).
+## 3. Agent Teams — no disponible
+
+Todo lo de `teams/<team>/config.json`, inboxes, `teammateMode: tmux|iterm2` es **solo Claude Code**.
+
+Sustituto razonable en Cursor:
+
+1. Varios Task en paralelo con ficheros particionados (evita que dos editen el mismo file).
+2. Un humano (o el agente principal) integra resultados.
+3. Para greenfield multi-fase: Plan mode + skills de metodología (no GSD plugin).
+
+## 4. ¿Task o “equipo”?
+
+| | **Task / subagente** | **Agent team (Claude only)** |
+|---|---|---|
+| En Cursor | Sí | No |
+| Contexto | Resumen al principal | Sesiones completas + mensajería |
+| Coste | Menor | Alto |
+| Ideal | Side-quests, scout, review | Trabajo paralelo con debate entre agents |
+
+**Conexión metodología:** el `refactor-scout` codifica CodeGraph → Serena. GSD en Claude Code empaquetaba
+roles similares como plugin; en Cursor los roles viven como skills/prompts ([`../gsd/`](../gsd/)).
+
+El diagrama `agents.png` se regenera con `python render_agents.py` (fuente: `agents.mmd`).
+Actualiza el título del diagrama si quieres decir “Cursor Task” en lugar de “Agent Teams”.

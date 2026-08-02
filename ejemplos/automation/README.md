@@ -1,43 +1,54 @@
-# Automatización
+# Automatización (Cursor)
 
-Cuatro niveles, del más ligero al más autónomo.
+Cuatro niveles, del más ligero al más autónomo — adaptados desde el material Claude Code.
 
 ## 1. Hooks (determinista, dentro de la sesión)
 
-Comandos que se disparan antes/después de las acciones del agente. Ver [`../hooks/`](../hooks/).
-Es la base: formateo, type-check, seguridad, observabilidad — sin depender de que el modelo "se acuerde".
+Ver [`../hooks/`](../hooks/). Formato, type-check, seguridad, handoff — sin depender de que el modelo
+“se acuerde”.
 
-## 2. Headless / Unix piping (`claude -p`)
+## 2. Headless / scripting — Cursor SDK (no `claude -p`)
 
-Claude Code es componible. En modo `-p` (print/headless) lee de stdin y escribe a stdout, así que
-encaja en cualquier pipeline:
+Claude Code: `tail -200 app.log | claude -p "…"`.
+
+Cursor: **no hay ese CLI pipe**. El equivalente programático es el **Cursor SDK**
+([`sdk.ts`](./sdk.ts)):
 
 ```bash
-# Analizar logs
-tail -200 app.log | claude -p "Avísame si ves alguna anomalía"
-
-# Operaciones masivas sobre ficheros cambiados
-git diff main --name-only | claude -p "Revisa estos ficheros por problemas de seguridad"
-
-# Traducciones en CI y abrir un PR
-claude -p "Traduce las cadenas nuevas al francés y abre un PR para revisión"
+export CURSOR_API_KEY=…   # o configuración del SDK
+npx tsx sdk.ts
 ```
 
-## 3. CI/CD (GitHub Actions / GitLab)
+Patrones:
 
-Revisión de PRs y triaje de issues automáticos. Ver [`github-action-claude.yml`](./github-action-claude.yml).
-Anthropic ofrece integraciones dedicadas: **GitHub Actions**, **GitLab CI/CD** y **GitHub Code Review**.
+| Necesidad | Cursor SDK |
+|---|---|
+| One-shot | `Agent.prompt(...)` |
+| Multi-turn / stream | `Agent.create` + `agent.send` + `run.stream()` |
+| Cloud vs local | `local: { cwd }` vs cloud runtime (docs SDK) |
 
-## 4. Tareas programadas (recurrentes)
+También existen **Cursor Automations** / Cloud Agents en el producto — distintos del pipe Unix de Claude.
 
-| Mecanismo | Dónde corre | Uso |
-|---|---|---|
-| **Routines** (`/schedule`) | Infra de Anthropic (aunque tu equipo esté apagado); puede dispararse por API o eventos de GitHub. | Reviews de PR por la mañana, auditoría semanal de dependencias. |
-| **Desktop scheduled tasks** | Tu máquina, con acceso a ficheros locales. | Tareas que necesitan tu entorno local. |
-| **`/loop`** | Dentro de una sesión CLI. | Polling rápido: repetir un prompt cada N minutos. |
+## 3. CI/CD (GitHub Actions)
 
-## 5. Agent SDK (programático)
+Ver [`github-action-cursor.yml`](./github-action-cursor.yml) — revisión vía `@cursor/sdk`.
 
-Para workflows totalmente a medida: construye tus propios agentes con las tools de Claude Code.
-Ver [`sdk.ts`](./sdk.ts) — `query({ prompt, options: { allowedTools } })`.
-El propio `query_hook.js` de la sección de hooks es un SDK-dentro-de-un-hook: "IA revisando IA".
+> El workflow original instalaba Claude Code y usaba `claude -p`. Eso **sigue siendo válido solo si
+> quieres Claude en CI**. Para Cursor, usa API key del SDK (`CURSOR_API_KEY`), no `ANTHROPIC_API_KEY`
+> del CLI de Claude (salvo que tu review sea deliberadamente Claude).
+
+## 4. Tareas programadas
+
+| Claude Code | Cursor |
+|---|---|
+| Routines `/schedule`, Desktop scheduled tasks, `/loop` | **Automations** / scheduling del producto Cursor (nombres y UI cambian) — no copies `/schedule` literal |
+| Loop en sesión CLI | Skill `loop` del entorno Cursor o Automations |
+
+Comprueba la docs actual de Cursor Automations; no asumas parity con Anthropic Routines.
+
+## 5. Agent SDK
+
+[`sdk.ts`](./sdk.ts) — `Agent.prompt` con least privilege conceptual (el modelo de permisos del SDK
+no es idéntico a `allowedTools: ["Edit"]` de Claude; revisa la docs `@cursor/sdk` al cablear).
+
+El `query_hook.js` de hooks es “IA revisando IA” con este mismo SDK.

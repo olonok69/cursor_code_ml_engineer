@@ -1,63 +1,53 @@
-# Context window — el recurso que gobierna todo
+# Context window — el recurso que gobierna todo (Cursor)
 
-El context window es **el recurso más importante que gestionas** en Claude Code: todo lo demás (CLAUDE.md,
-MCP, subagentes, caching) son técnicas para no desperdiciarlo. Material de la sección **Contexto** de la
-Parte 1 (ver [`GUIA_PRESENTACION.md`](../../GUIA_PRESENTACION.md)).
+El context window sigue siendo **el recurso más importante**: rules, MCP, subagents/Task y skills
+existen para no desperdiciarlo. Material paralelo a la sección **Contexto** del curso Claude Code.
 
-## 1. Anatomía: qué llena el contexto
+## 1. Anatomía: qué llena el contexto en Cursor
 
-Antes de que escribas una palabra, la sesión ya carga (~cifras de la doc oficial):
+Antes de que escribas una palabra, la sesión ya carga (órdenes de magnitud; varían por modelo/UI):
 
-| Bloque | Coste aproximado |
+| Bloque | Notas |
 |---|---|
-| System prompt de Claude Code | ~4.200 tokens (oculto, siempre primero) |
-| Auto-memory (`MEMORY.md`) | primeras 200 líneas / 25 KB, ~680 tokens |
-| Info de entorno (SO, shell, git status) | ~280 tokens |
-| Tools MCP (modo deferred, por defecto) | ~120 tokens de índice; el schema completo se carga al usarla |
-| Tu `CLAUDE.md` (jerarquía completa) | lo que tú decidas — **por eso el patrón de dos niveles** |
+| System / agent prompt de Cursor | Oculto; siempre primero |
+| Rules `alwaysApply` + `AGENTS.md` | **Tú lo controlas** — por eso el patrón de dos niveles |
+| Memories (si las hay) | Distinto de la auto-memory `MEMORY.md` de Claude Code |
+| Info de entorno / workspace | SO, git, ficheros abiertos |
+| Tools MCP | Schemas de tools habilitadas; desactiva servers que no uses |
+| Skills relevantes | Cursor puede inyectar skills según `description` |
 
-Después, cada turno suma: conversación, ficheros leídos, output de comandos, resultados de tools. Los
-modelos actuales dan 200K tokens de ventana (1M en beta vía API) — y el rendimiento **degrada antes de
-llenarla**: un contexto lleno de ruido produce peores decisiones.
+Después, cada turno suma: conversación, ficheros leídos, output de comandos, resultados de tools.
+Un contexto lleno de ruido produce peores decisiones **antes** de llegar al límite duro.
 
-## 2. Los comandos
+## 2. Controles — qué hay y qué no
 
-```text
-/context                      # visualiza el uso: desglose por bloque, dónde se van los tokens
-/compact [instrucciones]      # compacta YA, guiando qué debe sobrevivir:
-/compact céntrate en los cambios de la API y la lista de ficheros modificados
-/clear                        # reset total entre tareas NO relacionadas
-/rewind   (o Esc+Esc)         # volver a un checkpoint: conversación, código, o ambos;
-                              # también "summarize from here" para condensar un tramo
-```
+### Disponible / práctico en Cursor
 
-- **Auto-compact:** al acercarte al límite, Claude Code compacta solo, resumiendo lo importante. Mejor
-  anticiparse con un `/compact <foco>` manual: la compactación es **lossy** y tú sabes qué importa.
-- **`/clear` vs `/compact`:** tarea nueva no relacionada → `/clear` (contexto fresco > resumen de ruido).
-  Misma tarea, sesión larga → `/compact` con instrucciones.
-- **Checkpoints:** `/rewind` restaura ediciones de Claude, **no** cambios hechos por Bash o externos
-  (no sustituye a git).
+- **Plan mode** — explorar y diseñar sin ensuciar la sesión de implementación (equivalente cultural a Explore → Plan → Code).
+- **Task / subagents** — side-quests con contexto aislado; solo vuelve el resumen ([`../subagents/`](../subagents/)).
+- **Rules lean + punteros** — no pegues `STATUS.md` entero en una rule always-on.
+- **MCP con moderación** — cada server suma tools; apaga lo que no uses ([`../mcp/`](../mcp/)).
+- **Nueva chat / limpiar hilo** — cuando la tarea no está relacionada (análogo cultural a `/clear`).
+
+### No hay equivalente 1:1 a Claude Code
+
+| Claude Code | Cursor |
+|---|---|
+| `/context` (desglose por bloque) | No hay el mismo comando; inspecciona uso en la UI / sé disciplinado con rules |
+| `/compact [foco]` / auto-compact | Resumen/compactación **no** es el mismo producto; no asumas parity |
+| `/rewind` / checkpoints de edición del agente | Usa **git** como fuente de verdad de rollback |
+| `@import` en `CLAUDE.md` | Ver [`AGENTS.pointers-example.md`](./AGENTS.pointers-example.md) — solo punteros lazy |
 
 ## 3. Buenas prácticas (las que aplicamos de verdad)
 
-1. **CLAUDE.md mínimo** — regla de oro de la doc: *si puedes borrarlo sin que Claude se equivoque,
-   bórralo.* Nuestro patrón de dos niveles ([`../claude-md/`](../claude-md/)) es exactamente esto: nivel 1
-   siempre cargado con punteros; nivel 2 bajo demanda. El recorte real fue ~73%.
-2. **Imports bajo demanda** — `@ruta/fichero` dentro de CLAUDE.md incorpora otro doc; los CLAUDE.md de
-   subcarpetas solo se cargan al entrar en ellas. Ver [`CLAUDE.import-example.md`](./CLAUDE.import-example.md).
-3. **MCP con moderación** — cada server suma su bloque de tools. El modo deferred (por defecto) mitiga,
-   pero desactiva los servers que no uses en el proyecto. Menos tools = menos contexto **y** mejor caching
-   (ver [`../prompt-caching/`](../prompt-caching/)).
-4. **Subagentes para investigar** — la exploración sucia (leer 15 ficheros, probar hipótesis) va a un
-   subagente; a tu sesión vuelve el resumen ([`../subagents/`](../subagents/)).
-5. **Explore → Plan → Code** — separa la exploración (plan mode, read-only) de la implementación; los
-   artefactos de exploración no se quedan a vivir en el contexto de implementación.
-6. **Lecturas con puntería** — "lee `config/auth.js`" mejor que "entiende cómo funciona el auth". En la
-   metodología (Parte 2) esto es la regla CodeGraph-primero: 1 llamada con señal > 10 ficheros enteros.
-7. **`/context` regularmente** — mide antes de optimizar; te dice exactamente qué bloque engorda.
+1. **`AGENTS.md` + rules mínimos** — si puedes borrarlo sin que el agente se equivoque, bórralo. Patrón de dos niveles: [`../agents-md/`](../agents-md/).
+2. **Punteros, no copias** — detalle en `data/changes/` on-demand.
+3. **MCP con moderación** — menos tools = menos ruido (y a menudo mejor comportamiento).
+4. **Task para investigar** — la exploración sucia no vive en el hilo principal.
+5. **Plan → Agent** — no implementes en la misma sesión larga y ruidosa en la que exploraste sin necesidad.
+6. **Lecturas con puntería** — CodeGraph primero ([`../codegraph/`](../codegraph/)): 1 llamada con señal > 10 ficheros enteros.
+7. **Mide con evidencia** — si la sesión “se pone tonta”, empieza chat nuevo o recorta rules; no acumules transcript infinito.
 
-**Conexión con la Parte 2:** la prevalencia de tools de la metodología (CodeGraph → Serena → grep) es,
-en el fondo, una política de gestión de contexto: máxima señal por token.
+**Conexión con la Parte 2:** la prevalencia CodeGraph → Serena → grep es una política de gestión de contexto.
 
-Docs: [context-window](https://code.claude.com/docs/en/context-window) ·
-[best practices](https://code.claude.com/docs/en/best-practices).
+Pack: [`../../docs/ai-agents-code-methodology/CURSOR_ADAPTATION.md`](../../docs/ai-agents-code-methodology/CURSOR_ADAPTATION.md).

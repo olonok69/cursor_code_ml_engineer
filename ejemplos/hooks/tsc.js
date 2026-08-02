@@ -1,11 +1,7 @@
 #!/usr/bin/env node
 /**
- * PostToolUse hook (matcher: Write|Edit|MultiEdit) — GATE DE CALIDAD (tipos).
- *
- * Ejecuta el type-check de TypeScript tras cada edición. Si hay errores de
- * tipo, BLOQUEA (exit 2) y devuelve los diagnósticos a Claude para que los
- * corrija en el mismo turno. Este es el patrón "el hook mantiene al agente
- * dentro de las líneas": el modelo no puede seguir dejando el árbol roto.
+ * afterFileEdit — GATE DE CALIDAD (tipos) — Cursor.
+ * Type-check tras editar .ts/.tsx. Si falla → permission deny + diagnostics.
  */
 import ts from "typescript";
 
@@ -15,8 +11,20 @@ async function readStdin() {
   return Buffer.concat(chunks).toString();
 }
 
+function extractPath(payload) {
+  return (
+    payload.path ||
+    payload.filePath ||
+    payload.file_path ||
+    payload.tool_response?.filePath ||
+    payload.tool_input?.file_path ||
+    ""
+  );
+}
+
 function runTypeCheck(configPath) {
   const cfg = ts.readConfigFile(configPath, ts.sys.readFile);
+  if (cfg.error) return "No se pudo leer tsconfig.json";
   const parsed = ts.parseJsonConfigFileContent(cfg.config, ts.sys, process.cwd());
   const program = ts.createProgram(parsed.fileNames, {
     ...parsed.options,
@@ -31,16 +39,21 @@ function runTypeCheck(configPath) {
   });
 }
 
-const payload = JSON.parse(await readStdin());
-const file = payload.tool_response?.filePath || payload.tool_input?.file_path;
+const payload = JSON.parse((await readStdin()) || "{}");
+const file = extractPath(payload);
 
-// Solo actuar sobre ficheros .ts/.tsx.
 if (!file || !/\.(ts|tsx)$/.test(file)) process.exit(0);
 
 const errors = runTypeCheck("./tsconfig.json");
 if (errors) {
-  console.error(errors); // <-- vuelve a Claude
-  process.exit(2); // <-- bloquea hasta que compile
+  process.stdout.write(
+    JSON.stringify({
+      permission: "deny",
+      agent_message: `TypeScript errors — fix before continuing:\n${errors}`,
+      user_message: "Typecheck failed after edit; agent must fix diagnostics.",
+    }),
+  );
+  process.exit(0);
 }
 
 process.exit(0);

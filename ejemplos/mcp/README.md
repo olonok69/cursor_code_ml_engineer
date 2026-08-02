@@ -1,38 +1,55 @@
-# MCP — Model Context Protocol
+# MCP — Model Context Protocol (Cursor)
 
-**MCP** es un estándar abierto para conectar Claude Code a fuentes de datos y herramientas externas:
-docs de Google Drive, tickets de Jira, tu base de datos, un navegador, tu propio tooling… El servidor
-MCP expone *tools* que Claude puede llamar; las tools aparecen con el prefijo `mcp__<server>__<tool>`.
+**MCP** conecta Cursor a fuentes de datos y herramientas externas. El servidor expone *tools* que el
+agente puede llamar (CodeGraph, Serena, Playwright, Context7, tu propio tooling…).
 
-## Los tres scopes (dónde vive la config)
+## Dónde vive la config en Cursor
 
-| Scope | Fichero | Alcance |
+| Scope | Fichero típico | Alcance |
 |---|---|---|
-| **local** | `.claude/settings.local.json` | Solo tú, solo esta máquina/proyecto (no versionado). |
-| **project** | `.mcp.json` (raíz del repo) | Compartido con el equipo, **se versiona**. Ver [`.mcp.json`](./.mcp.json). |
-| **user** | `~/.claude.json` | Todos tus proyectos. |
+| **project** | `.cursor/mcp.json` | Compartido con el equipo (versiona con cuidado; sin secretos). Ver [`mcp.json.example`](./mcp.json.example). |
+| **user / global** | Settings MCP de Cursor (UI) | Todos tus proyectos en esa máquina. |
 
-## Añadir un server por CLI
+> Claude Code usaba `.mcp.json` en la raíz, `settings.local.json` y `~/.claude.json`.
+> En Cursor el sitio canónico de proyecto es **`.cursor/mcp.json`**.
 
-```bash
-# stdio (proceso local)
-claude mcp add serena -- uvx --from git+https://github.com/oraios/serena serena start-mcp-server
+## Añadir un server
 
-# HTTP remoto
-claude mcp add --transport http context7 https://mcp.context7.com/mcp
+1. Edita `.cursor/mcp.json` (o usa la UI de Cursor → MCP).
+2. **Recarga la ventana** de Cursor (los cambios MCP no siempre aplican en caliente).
+3. Comprueba en la UI de MCP que el server está verde y lista tools.
 
-claude mcp list          # ver servers y estado
-/mcp                     # dentro de la sesión: estado, auth OAuth, herramientas
+No hay `claude mcp add` / `/mcp` de Claude Code. El equivalente es el editor de MCP de Cursor + JSON.
+
+Ejemplo stdio (Serena):
+
+```json
+"serena": {
+  "command": "uvx",
+  "args": ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"]
+}
+```
+
+Ejemplo HTTP (Context7):
+
+```json
+"context7": {
+  "url": "https://mcp.context7.com/mcp"
+}
 ```
 
 ## Buenas prácticas
 
-- **Secretos por variable de entorno**, nunca en el JSON versionado (ver el server `supabase`).
-- **Permisos**: aunque el server esté configurado, controlas qué tools se permiten con el allowlist
-  `mcp__playwright__browser_navigate`, etc. en `settings.local.json`.
-- **Elige el scope correcto**: lo del equipo → `.mcp.json`; lo tuyo personal → local/user.
+- **Secretos por variable de entorno**, nunca hardcodeados en JSON versionado (ver `supabase` en el ejemplo).
+- **Permisos:** Cursor no usa el allowlist `mcp__server__tool` de Claude. Compensa con:
+  - rules que digan *qué* tool usar y cuándo,
+  - hooks `beforeMCPExecution` si necesitas vetar llamadas,
+  - approvals de la UI según tu settings.
+- **Elige el scope correcto:** lo del equipo → `.cursor/mcp.json`; lo personal → config de usuario.
+- Tras cambiar `--path` de CodeGraph: reload + verifica que `codegraph_explore` responde.
 
-## Servers que uso a diario
+## Servers del día a día (metodología)
 
-`serena` (navegación semántica de código) · `context7` (docs de librerías) · `playwright` (verificación
-de UI) · `codegraph` (grafo de conocimiento del código, ver `../codegraph/`) · `supabase`.
+`serena` · `context7` · `playwright` · `codegraph` (ver [`../codegraph/`](../codegraph/)) · opcional `supabase`.
+
+Pack listo: [`../../docs/ai-agents-code-methodology/cursor/mcp.json.example`](../../docs/ai-agents-code-methodology/cursor/mcp.json.example).

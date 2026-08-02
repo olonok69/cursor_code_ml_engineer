@@ -1,43 +1,45 @@
-# Ejemplos de hooks
+# Ejemplos de hooks (Cursor)
 
-Hooks reales adaptados del curso de Claude Code de Anthropic. Un **hook** es un comando de shell que
-Claude Code ejecuta automáticamente **antes o después** de una acción. Es la forma determinista de
+Un **hook** en Cursor es un comando (o prompt) que se ejecuta en eventos del agente
+(`preToolUse`, `afterFileEdit`, `beforeShellExecution`, …). Es la forma determinista de
 controlar al agente: no le *pides* que formatee o que no lea secretos, lo **fuerzas**.
 
-## El contrato de un hook (lo esencial)
+> Los scripts de esta carpeta están adaptados desde los ejemplos del curso Claude Code
+> (`PreToolUse` / `PostToolUse` + `exit 2`). El contrato de Cursor es distinto (ver abajo).
+
+## El contrato Cursor (lo esencial)
 
 | Concepto | Detalle |
 |---|---|
-| **Entrada** | El payload JSON del evento llega por **STDIN**. |
-| **Evento** | `PreToolUse`, `PostToolUse`, `SessionStart`, `Stop`, `UserPromptSubmit`, `Notification`, … |
-| **Matcher** | **Regex sobre el nombre de la tool**: `Read\|Grep`, `Write\|Edit\|MultiEdit`, `*` (todas). |
-| **Varios hooks** | Por matcher se ejecutan **en secuencia** (p. ej. formatear y luego type-check). |
-| **`timeout`** | En segundos. Súbelo si el hook llama a un modelo (ver `query_hook.js`, 300s). |
-| **Salida** | `exit 0` = permite · **`exit 2` = BLOQUEA** y devuelve `stderr` a Claude como feedback. |
+| **Config** | `.cursor/hooks.json` (proyecto) o `~/.cursor/hooks.json` (usuario) |
+| **Entrada** | Payload JSON por **STDIN** |
+| **Salida** | JSON en stdout (`permission`, `user_message`, `agent_message`, …) **o** `exit 2` = deny |
+| **Eventos útiles** | `preToolUse`, `postToolUse`, `beforeReadFile`, `afterFileEdit`, `beforeShellExecution`, `beforeMCPExecution`, … |
+| **Matcher** | Regex JS sobre tipo de tool / comando (no el mismo matcher Claude `Read\|Grep`) |
+| **`failClosed`** | Si el hook crashea, bloquear en vez de fail-open |
 
-## Pre vs Post — qué datos recibes
+Docs de producto: skill interna `create-hook` / docs Cursor Hooks.
 
-- **`PreToolUse`** te da `tool_input` (la *intención*, antes de ejecutar) → puedes **bloquear**.
-- **`PostToolUse`** añade `tool_response` (el *resultado* real, con `structuredPatch`) → reaccionas/formateas/verificas.
+## Mapa Claude → Cursor
 
-Por eso los scripts leen `tool_response?.filePath` después de editar, pero `tool_input?.file_path` antes.
-Ver [`pre-log.json`](./pre-log.json) y [`post-log.json`](./post-log.json) capturados con `log_hook.js`.
-
-## Los scripts
-
-| Script | Evento / matcher | Qué hace | ¿Bloquea? |
-|---|---|---|---|
-| [`read_hook.js`](./read_hook.js) | PreToolUse · `Read\|Grep` | Seguridad: impide leer `.env`. | Sí (exit 2) |
-| [`log_hook.js`](./log_hook.js) | Pre + Post · `*` | Observabilidad: vuelca el payload a un JSON. | No |
-| [`format_hook.js`](./format_hook.js) | PostToolUse · edits | Calidad: `prettier --write` sobre el fichero editado. | No (a propósito) |
-| [`tsc.js`](./tsc.js) | PostToolUse · edits | Calidad: type-check; corta si no compila. | Sí (exit 2) |
-| [`query_hook.js`](./query_hook.js) | PreToolUse · edits | "IA revisando IA": llama al Agent SDK para detectar queries duplicadas. | Sí (exit 2) |
+| Ejemplo Claude | Evento Cursor recomendado | Script |
+|---|---|---|
+| PreToolUse Read\|Grep → bloquear `.env` | `beforeReadFile` / `preToolUse` | [`read_hook.js`](./read_hook.js) |
+| Pre+Post log payload | `preToolUse` + `postToolUse` | [`log_hook.js`](./log_hook.js) |
+| PostToolUse format prettier | `afterFileEdit` | [`format_hook.js`](./format_hook.js) |
+| PostToolUse tsc bloqueante | `afterFileEdit` | [`tsc.js`](./tsc.js) |
+| PreToolUse “IA revisa IA” (SDK) | `preToolUse` | [`query_hook.js`](./query_hook.js) — **usa Cursor SDK**; ver nota |
+| (metodología) bloquear push/deploy | `beforeShellExecution` | pack: `block-external-git.ps1` |
 
 ## Cómo enganchar todo
 
-Copia [`settings.json`](./settings.json) a `.claude/settings.json` (compartido en el repo) o a
-`.claude/settings.local.json` (personal, no versionado) y ajusta las rutas de los scripts.
+1. Copia los scripts a `.cursor/hooks/` en tu repo (o deja rutas relativas desde la raíz).
+2. Copia [`hooks.json.example`](./hooks.json.example) → `.cursor/hooks.json` y ajusta paths.
+3. Recarga Cursor; verifica en **Hooks** settings / output channel.
 
-> **Truco de distribución** (del curso): si tus hooks necesitan rutas absolutas, guarda un
-> `settings.example.json` con un token `$PWD` y un pequeño `scripts/init-claude.js` que lo sustituya por
-> `process.cwd()` al hacer `npm run setup`. Así el config es portable entre máquinas.
+## Diferencias que importan
+
+1. **Payload:** Cursor no garantiza `tool_input.file_path` / `tool_response.filePath` de Claude. Los scripts prueban varios campos (`path`, `filePath`, `file_path`, `uri`).
+2. **Bloqueo:** preferible `permission: "deny"` (o `"ask"`) en JSON; `exit 2` también deniega.
+3. **`query_hook.js`:** el original llamaba `@anthropic-ai/claude-agent-sdk`. Aquí usa `@cursor/sdk` (`Agent.prompt`). Necesitas `CURSOR_API_KEY` y el paquete instalado — es el ejemplo avanzado; desactívalo si no lo quieres en el curso.
+4. No copies `.claude/settings.json` hooks a Cursor sin reescribir eventos.

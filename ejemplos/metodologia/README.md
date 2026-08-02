@@ -1,18 +1,18 @@
-# Metodología real de trabajo con Claude Code
+# Metodología real de trabajo con Cursor
 
-Cómo se usa Claude Code de verdad en un proyecto en producción — **no una plantilla ideal**, sino el
-flujo que usamos, sujeto a revisión constante. Sanitizado (sin nombres de cliente, IDs de ticket ni
-secretos); las herramientas, gates y organización son los reales.
+Cómo se aplica la **misma** metodología de 11 etapas del curso (nacida en Claude Code) usando
+**Cursor** como agente. No es una plantilla ideal: es el flujo de producción, con la superficie
+adaptada (rules, skills, MCP, hooks).
 
 | Archivo | Qué es |
 |---|---|
-| [`WORKFLOW.md`](./WORKFLOW.md) | Las 11 etapas + la memoria de dos niveles, con las tools reales. |
-| [`EJEMPLO_REAL.md`](./EJEMPLO_REAL.md) | **Un caso concreto de principio a fin** (un bug de "campo vacío") por las 11 etapas. |
-| [`herramientas.md`](./herramientas.md) | Prevalencia de tools: qué usa Claude y cuándo (Serena, CodeGraph, Playwright, AWS CLI, oráculo determinista). |
-| [`machine-sync.md`](./machine-sync.md) | **Un runbook real de ops**: sincronizar el workspace entre máquinas (copia completa vs. delta), aterrizado por un agente con guardrails. Incluye bring-up desde cero (`bootstrap`) y round-trip de memoria (`snapshot`/`restore`) para el grafo `/kg`. |
-| [`../../docs/KNOWLEDGE_GRAPH.md`](../../docs/KNOWLEDGE_GRAPH.md) | El **grafo de tickets** (`/kg`, con **graphify**): CodeGraph pero para tickets/lecciones — la capa de orientación de la etapa 1. |
-| [`flow.png`](./flow.png) | El diagrama del flujo, renderizado (gates en coral, la rama roja es STOP). |
-| [`flow.mmd`](./flow.mmd) · [`render_flow.py`](./render_flow.py) | Fuente editable (Mermaid) y el script que genera `flow.png` (`python render_flow.py`). |
+| [`WORKFLOW.md`](./WORKFLOW.md) | Las 11 etapas + memoria de dos niveles, con tools en Cursor. |
+| [`EJEMPLO_REAL.md`](./EJEMPLO_REAL.md) | Un caso concreto (campo vacío) por las 11 etapas. |
+| [`herramientas.md`](./herramientas.md) | Prevalencia: CodeGraph, Serena, Playwright, skill `kg`, oráculos. |
+| [`machine-sync.md`](./machine-sync.md) | Runbook de ops (origen Claude); nota de adaptación Cursor al inicio. |
+| [`../../docs/KNOWLEDGE_GRAPH.md`](../../docs/KNOWLEDGE_GRAPH.md) | Grafo de tickets (graphify) — scripts iguales; skill `kg` en Cursor. |
+| [`../../docs/ai-agents-code-methodology/CURSOR_ADAPTATION.md`](../../docs/ai-agents-code-methodology/CURSOR_ADAPTATION.md) | Pack completo de adaptación. |
+| [`flow.png`](./flow.png) | Diagrama del flujo. |
 
 ![Flujo de trabajo — 11 etapas](./flow.png)
 
@@ -20,29 +20,27 @@ secretos); las herramientas, gates y organización son los reales.
 
 > **El agente es un colaborador disciplinado, no un autopilot. La autonomía se gana por-decisión.**
 
-El agente hace la anchura (investigar, planificar, implementar, testear, documentar); el humano es dueño
-de las decisiones y de **toda acción externa**. Entre medias, una serie de **gates deterministas**
-—contrato de salida, oráculo determinista (sin inferencia), batería de tests, prueba no-op, escaneo de sanitización— convierten
-la capacidad bruta del modelo en salida fiable.
+Gates deterministas (contrato, oráculo, tests, sanitise, humano en lo externo) — iguales que en Claude Code.
 
-## Cómo encaja con las herramientas del repo
+## Superficie Cursor (dónde vive qué)
 
-- **GSD** ([`../gsd/`](../gsd/)) es este método **productizado**: separa discutir/planificar/ejecutar/
-  verificar con estado en `.planning/` y subagentes especializados. **Este proyecto no lo usa a diario**
-  (corre el flujo de 11 etapas + `data/changes/`, más afinado a fixes por ticket); GSD encaja mejor en un
-  *greenfield* multi-componente con roadmap → fases.
-- **`/kg`** (grafo de tickets, [`../../docs/KNOWLEDGE_GRAPH.md`](../../docs/KNOWLEDGE_GRAPH.md)) es la capa de
-  **orientación** (etapa 1): CodeGraph pero para tickets/lecciones, construido con **graphify** — saca la
-  zona de peligro antes de grep.
-- **CodeGraph** ([`../codegraph/`](../codegraph/)) y **Serena** son la capa de navegación (etapa 4).
-- **Playwright** verifica el contrato de salida (etapa 2 y 7); en la etapa 7, **Docker** re-corre el repro
-  **dentro de la imagen desplegada** (los tests en verde no prueban lo que se envía).
+| Rol | Claude Code | Cursor |
+|---|---|---|
+| Orientación always-on | `CLAUDE.md` | `AGENTS.md` + `.cursor/rules/` |
+| Skills `/kg`, sanitise… | `~/.claude/skills/` | `.cursor/skills/` |
+| MCP | `.mcp.json` / `claude mcp add` | `.cursor/mcp.json` |
+| Hard gates | hooks + allowlist | `.cursor/hooks.json` |
+| Plan gate | Plan mode | **Plan mode** |
+| Handoff externo | a menudo “el humano / Cursor” | humano (Cursor *es* el agente → rules/hooks bloquean push) |
 
-## El método es portable (no vive atado a este repo)
+## Cómo encaja con las herramientas
 
-La disciplina —plan→acuerdo, contrato de salida, gates de evidencia, "el humano hace lo externo"— es
-**agnóstica de la herramienta**. Existe un *starter-kit* portable (plantillas de `STATUS` / `SHARP_EDGES` /
-handover / criterios de QA + un script de bootstrap) para llevar estos guardrails a **otro repo** o a
-**GitHub Copilot**: viaja la metodología, y las tools concretas (Serena, CodeGraph, `/kg`) se sustituyen por
-las del nuevo entorno. Es la misma idea que el runbook de ops de [`machine-sync.md`](./machine-sync.md):
-el método se empaqueta y se transporta, no se reinventa en cada sitio.
+- **GSD** ([`../gsd/`](../gsd/)) — plugin **solo Claude Code**; en Cursor usa Plan + skills.
+- **Skill `kg`** — mismos scripts graphify; ver pack `cursor/skills/kg`.
+- **CodeGraph / Serena / Playwright** — MCP en `.cursor/mcp.json`.
+- **Docker** — outbound en imagen desplegada (igual).
+
+## Portabilidad
+
+Starter-kit: [`../../docs/ai-agents-code-methodology/`](../../docs/ai-agents-code-methodology/)
+(`CURSOR_ADAPTATION.md` + `bootstrap-cursor-repo.ps1`).

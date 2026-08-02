@@ -27,8 +27,21 @@ d = ImageDraw.Draw(img)
 
 
 def font(size, bold=False):
-    name = "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf"
-    return ImageFont.truetype(name, size * SS)
+    import os
+    windir = os.environ.get("WINDIR", r"C:\Windows")
+    candidates = (
+        ["DejaVuSans-Bold.ttf", os.path.join(windir, "Fonts", "seguisb.ttf"),
+         os.path.join(windir, "Fonts", "arialbd.ttf")]
+        if bold else
+        ["DejaVuSans.ttf", os.path.join(windir, "Fonts", "segoeui.ttf"),
+         os.path.join(windir, "Fonts", "arial.ttf")]
+    )
+    for name in candidates:
+        try:
+            return ImageFont.truetype(name, size * SS)
+        except OSError:
+            continue
+    return ImageFont.load_default()
 
 
 def rr(x, y, w, h, r=14, fill=PANEL, outline=STROKE, width=1):
@@ -62,12 +75,12 @@ f_b  = font(14, True)
 f_s  = font(12)
 f_xs = font(11)
 
-ltext(40, 28, "Subagentes vs. Agent Teams — dos formas de escalar", f_t, TEXT)
-ltext(40, 66, "Subagente: contexto aislado, vuelve un resumen.  Team: sesiones completas + task list compartida + mensajería.", f_s, MUTED)
+ltext(40, 28, "Cursor Task vs. Agent Teams (Claude only)", f_t, TEXT)
+ltext(40, 66, "Cursor: Task/subagents (resumen).  Agent Teams de Claude Code: no disponibles en Cursor.", f_s, MUTED)
 
 # ---------------- panel izquierdo: SUBAGENTES ----------------
 rr(40, 110, 700, 560, r=18, fill=(20, 26, 34), outline=STROKE)
-ltext(66, 130, "SUBAGENTES  (tool Task)", f_h, BLUE)
+ltext(66, 130, "CURSOR — Task / subagents", f_h, BLUE)
 ltext(66, 160, "coste bajo · lo caro muere con el subagente", f_xs, MUTED)
 
 # sesión principal
@@ -76,8 +89,8 @@ ctext(200, 250, "Sesión principal", f_b, TEXT)
 ctext(200, 280, "tu contexto", f_s, MUTED)
 ctext(200, 305, "(no se ensucia)", f_s, MUTED)
 
-subs = [("Explore", "read-only"), ("Plan", "arquitectura"),
-        ("custom  .claude/agents/*.md", "security-reviewer · refactor-scout")]
+subs = [("explore", "read-only"), ("generalPurpose", "multi-paso"),
+        ("skill / prompt template", "security · refactor-scout")]
 for i, (t, sub) in enumerate(subs):
     y = 200 + i * 150
     rr(430, y, 280, 100, fill=PANEL, outline=STROKE)
@@ -91,8 +104,8 @@ ltext(66, 630, "El subagente NO hereda tu conversación: dale el contexto en el 
 
 # ---------------- panel derecho: AGENT TEAM ----------------
 rr(790, 110, 730, 560, r=18, fill=(20, 26, 34), outline=STROKE)
-ltext(816, 130, "AGENT TEAM  (experimental)", f_h, CORAL)
-ltext(816, 160, "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1 · coste alto: cada teammate = una sesión", f_xs, MUTED)
+ltext(816, 130, "CLAUDE ONLY — Agent Teams", f_h, CORAL)
+ltext(816, 160, "No existe en Cursor · referencia del curso Claude Code · coste alto", f_xs, MUTED)
 
 # lead
 rr(1040, 205, 230, 105, fill=PANEL2, outline=CORAL, width=2)
@@ -115,14 +128,14 @@ ctext(1155, 432, "mensajería directa (inboxes)", f_xs, BLUE)
 # task list compartida
 rr(940, 560, 430, 72, fill=PANEL2, outline=GREEN, width=2)
 ctext(1155, 583, "Task list compartida", f_b, GREEN)
-ctext(1155, 610, "~/.claude/tasks/<team>/  ·  sobrevive al resume", f_xs, MUTED)
+ctext(1155, 610, "solo Claude Code  ·  no hay port en Cursor", f_xs, MUTED)
 for x in (965, 1155, 1345):
     d.line([x*SS, 505*SS if x != 1155 else 310*SS, x*SS, 560*SS], fill=STROKE, width=2*SS)
 
 ltext(816, 645, "Particiona los ficheros: cada teammate es dueño de los suyos.", f_xs, CORAL)
 
 # footer
-ltext(40, 706, "Regla: side-quest de investigación → subagente.  Trabajo paralelo real que necesita debate → team.", f_s, GREEN)
+ltext(40, 706, "En Cursor: side-quests → Task.  Paraleliza con varios Task + ficheros particionados (sin Agent Teams).", f_s, GREEN)
 
 img = img.resize((W, H), Image.LANCZOS)
 img.save("agents.png")

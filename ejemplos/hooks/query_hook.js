@@ -1,16 +1,17 @@
 #!/usr/bin/env node
 /**
- * PreToolUse hook (matcher: Write|Edit|MultiEdit, timeout: 300) — "IA revisando IA".
+ * preToolUse — "IA revisando IA" (Cursor).
  *
- * El ejemplo estrella: un hook que a su vez llama al Claude Agent SDK para
- * decidir si la edición propuesta DUPLICA una función de query ya existente.
- * Si detecta duplicación, bloquea (exit 2) y explica por qué.
+ * Llama al Cursor SDK para detectar si una edición en src/queries DUPLICA
+ * una query existente. Si sí → permission deny.
  *
- * El timeout del hook está a 300s en settings.json porque este hook hace una
- * llamada a un modelo (no es instantáneo como los demás).
+ * Requisitos:
+ *   - npm i @cursor/sdk  (o npx con el paquete disponible)
+ *   - CURSOR_API_KEY en el entorno del hook
+ *
+ * Si falta el SDK o la key, el hook hace fail-open (allow) y escribe en stderr.
  */
 import path from "node:path";
-import { query } from "@anthropic-ai/claude-agent-sdk";
 
 async function readStdin() {
   const chunks = [];
@@ -18,19 +19,45 @@ async function readStdin() {
   return Buffer.concat(chunks).toString();
 }
 
+function extractPathAndContent(payload) {
+  const filePath =
+    payload.tool_input?.file_path ||
+    payload.tool_input?.path ||
+    payload.path ||
+    payload.filePath ||
+    payload.args?.path ||
+    "";
+  const newContent =
+    payload.tool_input?.content ||
+    payload.tool_input?.contents ||
+    payload.tool_input?.new_string ||
+    payload.args?.contents ||
+    payload.args?.new_string ||
+    "";
+  return { filePath, newContent };
+}
+
 const REVIEW_DIR = "src/queries";
-const payload = JSON.parse(await readStdin());
-const toolInput = payload.tool_input ?? {};
-const filePath = toolInput.file_path;
+const payload = JSON.parse((await readStdin()) || "{}");
+const { filePath, newContent } = extractPathAndContent(payload);
 if (!filePath) process.exit(0);
 
-// Actuar solo sobre ficheros dentro de src/queries.
 const normalized = path.resolve(filePath);
 const queriesDir = path.resolve(process.cwd(), REVIEW_DIR);
 if (!normalized.startsWith(queriesDir + path.sep)) process.exit(0);
 
-const newContent =
-  toolInput.content || toolInput.contents || toolInput.new_string || "";
+if (!process.env.CURSOR_API_KEY) {
+  console.error("query_hook: CURSOR_API_KEY missing — fail-open");
+  process.exit(0);
+}
+
+let Agent;
+try {
+  ({ Agent } = await import("@cursor/sdk"));
+} catch {
+  console.error("query_hook: @cursor/sdk not installed — fail-open");
+  process.exit(0);
+}
 
 const prompt = `Estás revisando un cambio propuesto a un fichero de queries de BBDD.
 Fichero: ${filePath}
@@ -41,13 +68,26 @@ ${newContent}
 Si sí, da feedback concreto de qué función reutilizar.
 Si no, responde exactamente: "Changes look appropriate."`;
 
-const messages = [];
-for await (const message of query({ prompt })) messages.push(message);
-const result = messages.find((m) => m.type === "result");
-
-if (!result || result.result.includes("Changes look appropriate")) {
+try {
+  const result = await Agent.prompt(prompt, {
+    apiKey: process.env.CURSOR_API_KEY,
+    model: { id: "composer-2.5" },
+    local: { cwd: process.cwd() },
+  });
+  const text = String(result.result ?? "");
+  if (text.includes("Changes look appropriate")) {
+    process.stdout.write(JSON.stringify({ permission: "allow" }));
+    process.exit(0);
+  }
+  process.stdout.write(
+    JSON.stringify({
+      permission: "deny",
+      agent_message: `Duplicación de query detectada:\n\n${text}`,
+      user_message: "Query duplication hook blocked the edit.",
+    }),
+  );
+  process.exit(0);
+} catch (err) {
+  console.error(`query_hook error (fail-open): ${err}`);
   process.exit(0);
 }
-
-console.error(`Duplicación de query detectada:\n\n${result.result}`);
-process.exit(2); // <-- bloquea la edición y explica el motivo
