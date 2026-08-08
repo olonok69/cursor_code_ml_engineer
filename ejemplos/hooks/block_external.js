@@ -1,14 +1,18 @@
 #!/usr/bin/env node
 /**
  * beforeShellExecution — pide confirmación humana ante push/PR/deploy.
+ * ESM (import) para que top-level await sea válido en Node.
  */
+import process from "node:process";
+
 async function readStdin() {
   const chunks = [];
   for await (const chunk of process.stdin) chunks.push(chunk);
   return Buffer.concat(chunks).toString();
 }
 
-const payload = JSON.parse((await readStdin()) || "{}");
+const raw = await readStdin();
+const payload = JSON.parse(raw || "{}");
 const command = String(payload.command || "");
 
 const patterns = [

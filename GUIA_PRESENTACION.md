@@ -84,29 +84,34 @@ y la **nube** (Background/Cloud Agents) — tus `AGENTS.md`, rules y servers MCP
 # Editor: descarga desde cursor.com (macOS / Windows / Linux)
 
 # Cursor CLI (agent) — headless-capable
+# macOS / Linux / WSL:
 curl https://cursor.com/install -fsS | bash
+# Windows PowerShell:
+irm 'https://cursor.com/install?win32=true' | iex
 ```
 Luego, en cualquier proyecto:
 ```bash
 cd tu-proyecto
-agent             # CLI interactiva, primera vez pide login
+agent             # CLI interactiva, primera vez pide login (o agent auth)
 ```
 
 **Los dos modos (la idea que hay que dejar clara):**
 - **Interactivo** — editor (chat / Agent mode) o CLI `agent`. Aquí vive el **Plan mode**: Cursor propone
   un plan antes de tocar nada y tú lo apruebas.
-- **Headless (`agent -p`)** — un solo prompt, entra por stdin, sale por stdout. Componible al estilo Unix
-  y automatizable en CI:
+- **Headless (`agent -p` / `--print`)** — un prompt, resultado por stdout. Para scripts y CI; combina con
+  `--force` si debe aplicar edits, y con `--output-format text|json` según el consumidor:
   ```bash
-  tail -200 app.log | agent -p "avísame si ves anomalías"
-  git diff main --name-only | agent -p "revisa estos ficheros por seguridad"
+  agent -p "resume los cambios de esta rama"
+  agent -p --output-format text "revisa por seguridad los ficheros tocados vs main"
+  # Contenido de un log: pásalo en el prompt o referencia el fichero (no asumas pipe stdin→prompt)
+  agent -p "Lee app.log (últimas ~200 líneas) y avísame si ves anomalías"
   ```
 
 **Superficies:** editor (chat + Agent mode + Plan mode, diffs inline), Cursor CLI (`agent` en terminal —
 ideal para SSH/servers), Background/Cloud Agents (`cursor.com/agents`, tareas async en la nube sin editor
 abierto), Bugbot (revisión de PR automática).
 
-🗣️ *"Interactivo para pensar contigo; `agent -p` para meterlo en una tubería. El mismo Cursor, tres superficies."*
+🗣️ *"Interactivo para pensar contigo; `agent -p` para meterlo en scripts y CI. El mismo Cursor, tres superficies."*
 
 ---
 
@@ -134,10 +139,12 @@ Specific Files, Apply Manually. Dentro de una rule, `@fichero` incluye contenido
 cargarla (eager) — **esta sintaxis no existe en `AGENTS.md`**, solo en `.mdc`.
 
 ### Permisos
-`~/.cursor/permissions.json` (y su equivalente de proyecto) controla qué puede hacer el agente con un
-**allowlist con glob** (`server:*`, `*:tool`). Es la misma postura que en Claude Code — "el humano es
-dueño de las acciones externas" — implementada con otro mecanismo: rules (prevalencia y "no push sin
-pedir") + approvals de la UI + hooks (`beforeShellExecution` para vetar por contenido).
+`~/.cursor/permissions.json` (y `<repo>/.cursor/permissions.json`) define allowlists con campos
+**`mcpAllowlist`** y **`terminalAllowlist`** — entradas `server:tool` con glob (`codegraph:*`,
+`*:search`). Cuando el fichero define una clave, **sustituye** el allowlist de la UI para ese tipo.
+Es la misma postura que en Claude Code — "el humano es dueño de las acciones externas" — reforzada con
+rules ("no push sin pedir") + approvals de la UI + hooks (`beforeShellExecution` para vetar por
+contenido). La CLI tiene su propio sistema de permisos (`cli-config.json`), aparte del IDE.
 
 ### Memories — un sistema DISTINTO
 Cursor genera **Memories** automáticamente a partir de tus chats — no son ficheros que tú escribes, y
@@ -170,9 +177,9 @@ output de comandos (crece cada turno).
 
 **Los mandos:**
 - Anillo de contexto del editor — visualiza el uso por bloque. Mide antes de optimizar.
-- `/clear` — nueva sesión, reset entre tareas no relacionadas.
-- `/rewind` — volver a un mensaje previo.
-- `/summarize` — resumir y liberar contexto manualmente.
+- Nueva chat / sesión limpia — reset entre tareas no relacionadas (en CLI: nueva invocación de `agent`).
+- `/rewind` — volver a un mensaje previo (CLI; habilitable en config).
+- `/summarize` (alias `/compress`) — resumir y liberar contexto manualmente.
 - Cursor **resume automáticamente** al acercarse al límite — no asumas paridad exacta con `/compact` de
   Claude Code; el mecanismo es distinto aunque el objetivo sea el mismo.
 
@@ -194,7 +201,7 @@ es de la API de Anthropic — pero si automatizas con la **Cursor SDK** contra C
 - `AGENTS.md` + rules pequeños y **estables** → prefijo que no cambia entre turnos → mejor comportamiento.
 - Editar rules/`AGENTS.md` a mitad de sesión → paga impuesto de nuevo.
 - Muchos servers MCP activos → bloque de tools grande y cambiante → más contexto fijo.
-- Nueva sesión / `/clear` entre tareas no relacionadas → evita arrastrar transcript infinito.
+- Nueva sesión / chat limpio entre tareas no relacionadas → evita arrastrar transcript infinito.
 - No asumas que Cursor expone `cache_control` como la API — es un producto distinto; no copies las env
   vars de Claude Code (`ENABLE_PROMPT_CACHING_1H`, etc.), no existen aquí.
 
@@ -276,15 +283,18 @@ cómo se coordinan. Dos escalones: subagents nativos → paralelismo real con Ba
 una ausencia deliberada que hay que nombrar: no hay Agent Teams. Todo el material en
 [`ejemplos/subagents/`](./ejemplos/subagents/).
 
-### 6a. Subagents (nativo, Cursor 2.4+) — aislar contexto
+### 6a. Subagents (nativo) — aislar contexto
 
-Delegación tipo `Task`: contexto **aislado** por subagent — a tu sesión principal vuelve solo el resumen.
-Se invoca por lenguaje natural (o `/nombre`); ejecución en paralelo para trabajo independiente. Los tipos
-base están documentados de forma laxa — no asumas nombres exactos sin comprobar la doc actual.
+Delegación con contexto **aislado** por subagent — a tu sesión principal vuelve solo el resumen.
+Se invoca por lenguaje natural (o `/nombre`); ejecución en paralelo para trabajo independiente.
+Built-ins documentados hoy: **Explore**, **Bash**, **Browser** (más tipos del entorno Task según
+versión). No asumas la lista sin mirar `docs.cursor.com/subagents`.
 
-**El sustituto de `.claude/agents/*.md`:** no hay un fichero de definición equivalente — el patrón que
-funciona es una **plantilla de prompt** (opcionalmente respaldada por una skill) que pegas al lanzar el
-subagent:
+**Subagents custom — sí hay fichero de definición:** `.cursor/agents/<nombre>.md` (proyecto) o
+`~/.cursor/agents/` (usuario), con frontmatter `name` + `description` (+ opcional `model`, `readonly`,
+`is_background`). Cursor también lee `.claude/agents/` y `.codex/agents/` por compatibilidad. Alternativa
+ligera: plantilla de prompt / skill que pegas al lanzar (ejemplos en
+[`ejemplos/subagents/prompts/`](./ejemplos/subagents/prompts/)):
 > *"Actúa como refactor-scout: usa CodeGraph `codegraph_explore` y LUEGO Serena
 > `find_referencing_symbols` antes de proponer el rename."*
 
@@ -308,11 +318,11 @@ agente principal) integra los resultados.
 | Comunicación | Solo resultado → sesión principal | Ninguna entre agentes (sin inbox) |
 | Coste | Bajo (lo caro muere fuera) | Alto (N sesiones completas) |
 | Úsalo para | Side-quests: investigar, verificar | Trabajo largo/async, o paralelismo real |
-| Config | Prompt/skill al lanzar | `cursor.com/agents` o CLI `--background` |
+| Config | `.cursor/agents/*.md`, prompt o skill al lanzar | `cursor.com/agents` o CLI `--background` |
 
 **Puente a la Parte 2:** GSD (Claude Code, sección 9) empaqueta roles como subagentes-plugin; en Cursor
-esos roles viven como skills/prompts — **este proyecto usa el flujo `data/changes/`, no GSD** (ver la
-aclaración en la sección 9).
+esos roles viven como `.cursor/agents/` + skills/prompts — **este proyecto usa el flujo `data/changes/`,
+no GSD** (ver la aclaración en la sección 9).
 
 🗣️ *"Subagent para que el ruido muera fuera; Background/Cloud Agent para trabajo largo o async. Sin inbox compartido: particiona los ficheros/ramas — cada agente es dueño de los suyos."*
 
@@ -334,7 +344,7 @@ lo **fuerzas**. Contrato:
 - `failClosed`: si el hook crashea, bloquea (no *fail-open*) — postura más estricta que el `exit 0`
   permite/`exit 2` bloquea de Claude Code, aunque el espíritu es el mismo.
 
-### b) Headless / piping — `agent -p` en cualquier tubería (ver sección 1).
+### b) Headless — `agent -p` en scripts y CI (ver sección 1; no asumas pipe stdin→prompt).
 
 ### c) CI/CD — Bugbot (nativo, revisión de PR sin script propio) o Cursor SDK en tu propio GitHub Action.
    Ejemplo de workflow en [`ejemplos/automation/github-action-cursor.yml`](./ejemplos/automation/github-action-cursor.yml).
@@ -504,8 +514,8 @@ bootstrap).
 | Skills en `~/.claude/skills/` | `.cursor/skills/` — **mismo `SKILL.md`**, sin traducir |
 | Hooks + `settings.local.json` (`exit 2`) | `.cursor/hooks.json` (JSON `permission`, `failClosed`) |
 | Plan mode | Plan mode — misma disciplina, mismo nombre |
-| Subagents / Agent Teams | Cursor Subagents (nativo) — **sin** Agent Teams; paralelismo con Background/Cloud Agents |
-| `claude -p` (headless) | `agent -p` (Cursor CLI) |
+| Subagents / Agent Teams | `.cursor/agents/*.md` + built-ins — **sin** Agent Teams; paralelismo con Background/Cloud Agents |
+| `claude -p` (headless) | `agent -p` (Cursor CLI print mode) |
 
 ### Qué se re-mapea por repo
 El **contrato** (payload HTTP / fila de DB / evento / artefacto), el **tracker** (Jira/Azure

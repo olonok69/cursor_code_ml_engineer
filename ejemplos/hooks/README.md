@@ -41,5 +41,6 @@ Docs de producto: skill interna `create-hook` / docs Cursor Hooks.
 
 1. **Payload:** Cursor no garantiza `tool_input.file_path` / `tool_response.filePath` de Claude. Los scripts prueban varios campos (`path`, `filePath`, `file_path`, `uri`).
 2. **Bloqueo:** preferible `permission: "deny"` (o `"ask"`) en JSON; `exit 2` también deniega.
-3. **`query_hook.js`:** el original llamaba `@anthropic-ai/claude-agent-sdk`. Aquí usa `@cursor/sdk` (`Agent.prompt`). Necesitas `CURSOR_API_KEY` y el paquete instalado — es el ejemplo avanzado; desactívalo si no lo quieres en el curso.
-4. No copies `.claude/settings.json` hooks a Cursor sin reescribir eventos.
+3. **ESM:** los hooks con top-level `await` necesitan `import` (o `.mjs`) para que Node los trate como módulo — ver `block_external.js` / `read_hook.js`.
+4. **`query_hook.js`:** el original llamaba `@anthropic-ai/claude-agent-sdk`. Aquí usa `@cursor/sdk` (`Agent.prompt`). Necesitas `CURSOR_API_KEY` y el paquete instalado — es el ejemplo avanzado; desactívalo si no lo quieres en el curso.
+5. No copies `.claude/settings.json` hooks a Cursor sin reescribir eventos.
