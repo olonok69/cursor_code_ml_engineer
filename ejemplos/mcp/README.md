@@ -41,10 +41,11 @@ Ejemplo HTTP (Context7):
 ## Buenas prácticas
 
 - **Secretos por variable de entorno**, nunca hardcodeados en JSON versionado (ver `supabase` en el ejemplo).
-- **Permisos:** Cursor no usa el allowlist `mcp__server__tool` de Claude. Compensa con:
+- **Permisos:** Cursor usa `permissions.json` con `mcpAllowlist` / `terminalAllowlist`
+  (`server:tool`), no el allowlist `mcp__server__tool` de Claude. Compensa además con:
   - rules que digan *qué* tool usar y cuándo,
   - hooks `beforeMCPExecution` si necesitas vetar llamadas,
-  - approvals de la UI según tu settings.
+  - approvals de la UI según tu Run Mode.
 - **Elige el scope correcto:** lo del equipo → `.cursor/mcp.json`; lo personal → config de usuario.
 - Tras cambiar `--path` de CodeGraph: reload + verifica que `codegraph_explore` responde.
 

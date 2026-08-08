@@ -12,13 +12,13 @@ Guía de adaptación completa: [`../docs/ai-agents-code-methodology/CURSOR_ADAPT
 | Carpeta | Tema Claude Code | Equivalente Cursor |
 |---|---|---|
 | [`agents-md/`](./agents-md/) | `CLAUDE.md` dos niveles | `AGENTS.md` + `.cursor/rules/` lean |
-| [`context/`](./context/) | Context window / `/compact` | Higiene de contexto + límites honestos |
+| [`context/`](./context/) | Context window / `/compact` | Higiene de contexto + `/summarize` / nueva sesión |
 | [`prompt-caching/`](./prompt-caching/) | Caching en Claude Code | Demo API Anthropic + qué controlas en Cursor |
 | [`mcp/`](./mcp/) | `.mcp.json` + `claude mcp add` | `.cursor/mcp.json` |
-| [`skills-plugins/`](./skills-plugins/) | Slash commands + skills + plugins | Skills en `.cursor/skills/` (sin marketplace Claude) |
-| [`subagents/`](./subagents/) | Task + Agent Teams | Task/subagents Cursor (**sin** Agent Teams) |
+| [`skills-plugins/`](./skills-plugins/) | Slash commands + skills + plugins | Skills en `.cursor/skills/` + Marketplace Cursor |
+| [`subagents/`](./subagents/) | Task + Agent Teams | `.cursor/agents/` + built-ins (**sin** Agent Teams) |
 | [`hooks/`](./hooks/) | Hooks Claude (`exit 2`) | `.cursor/hooks.json` + permission JSON |
-| [`automation/`](./automation/) | `claude -p` + Agent SDK | Cursor SDK (`@cursor/sdk`) + Automations |
+| [`automation/`](./automation/) | `claude -p` + Agent SDK | `agent -p` + Cursor SDK (`@cursor/sdk`) + Automations |
 | [`codegraph/`](./codegraph/) · [`serena/`](./serena/) | MCP en Claude | Mismos servers vía MCP de Cursor |
 | [`gsd/`](./gsd/) | Plugin GSD | **No hay port oficial** — ver nota |
 | [`metodologia/`](./metodologia/) | Flujo 11 etapas | Mismo flujo + superficie Cursor |
@@ -27,16 +27,17 @@ Guía de adaptación completa: [`../docs/ai-agents-code-methodology/CURSOR_ADAPT
 
 | Capacidad Claude Code | En Cursor |
 |---|---|
-| `CLAUDE.md` + `@import` + auto-memory `MEMORY.md` | `AGENTS.md` / `.cursor/rules/`; memories de Cursor **no** son el mismo sistema |
-| `/context`, `/compact`, `/clear`, `/rewind` | UI/sesión distintas; no hay esos slash commands 1:1 |
-| Allowlist `settings.local.json` (`mcp__*`) | Permisos/approvals de Cursor + hooks |
-| Plugins / marketplaces (`/plugin install`) | **No equivalente**; installs = rules/skills/MCP a mano o pack del repo |
-| Agent Teams (lead + teammates + inbox) | **No disponible**; usa Task en paralelo |
+| `CLAUDE.md` + `@import` + auto-memory `MEMORY.md` | `AGENTS.md` / `.cursor/rules/`; Memories de Cursor **no** son el mismo sistema |
+| `/context`, `/compact` | Anillo de contexto en UI; `/summarize` (alias `/compress`); resumen automático distinto |
+| Allowlist `settings.local.json` (`mcp__*`) | `permissions.json` con `mcpAllowlist` / `terminalAllowlist` (`server:tool`) + hooks |
+| Plugins Claude (`/plugin install`) | **Marketplace Cursor** (`cursor.com/marketplace`) — distinto producto; no copies `/plugin` |
+| Agent Teams (lead + teammates + inbox) | **No disponible**; usa subagents / Background Agents en paralelo |
 | GSD como plugin | **Solo Claude Code** hoy; en Cursor usa Plan mode + skills de metodología |
-| `claude -p` Unix pipe | Cursor SDK / Automations (API key), no el mismo CLI |
-| Skills en `~/.claude/skills/` | `.cursor/skills/` (proyecto) o `~/.cursor/skills/` (usuario) |
+| `claude -p` Unix pipe (stdin→prompt) | `agent -p` print mode (prompt en argumento; stdout out). No asumas el mismo pipe stdin |
+| Skills en `~/.claude/skills/` | `.cursor/skills/` (+ lee `.claude/skills/` por interop) |
 | Hooks `PreToolUse` + `exit 2` | Eventos Cursor (`preToolUse`, `afterFileEdit`, …) + JSON `permission` |
 | `codegraph install --target=claude` | Configura `.cursor/mcp.json` a mano (o bootstrap del pack) |
+| `.claude/agents/*.md` | **Sí hay equivalente:** `.cursor/agents/*.md` (también lee `.claude/agents/`) |
 
 Lo que **sí** viaja casi igual: MCP (CodeGraph/Serena/Playwright/Context7), disciplina de 11 etapas,
 ledgers `data/changes/`, oráculos `_diag_*.py`, Playwright para contrato, Docker para outbound.

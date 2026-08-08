@@ -5,7 +5,10 @@
  *
  * Respuesta Cursor: JSON con permission deny|ask|allow (stdout), exit 0.
  * exit 2 también deniega.
+ * ESM (import) para que top-level await sea válido en Node.
  */
+import process from "node:process";
+
 async function readStdin() {
   const chunks = [];
   for await (const chunk of process.stdin) chunks.push(chunk);

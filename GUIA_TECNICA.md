@@ -48,21 +48,26 @@
 # Editor: descarga desde cursor.com (macOS / Windows / Linux)
 
 # Cursor CLI (agent) — headless-capable
+# macOS / Linux / WSL:
 curl https://cursor.com/install -fsS | bash
+# Windows PowerShell:
+irm 'https://cursor.com/install?win32=true' | iex
 
 # Arrancar
-cd tu-proyecto && agent
+cd tu-proyecto && agent          # o: agent auth  si hace falta login
 
-# Headless (un prompt, stdout)
+# Headless / print mode (un prompt, stdout)
 agent -p "resume los cambios de esta rama"
+agent -p --output-format text "revisa por seguridad los ficheros tocados vs main"
+# Edits reales en scripts: añade --force (o --yolo)
 
 # En background (equivalente conceptual a lanzar un Background Agent desde CLI)
 agent -p "…" --background
 ```
-Comandos dentro de la sesión CLI: `/clear`, `/rewind`, `/summarize`, y los propios del editor (Plan mode,
-Agent mode, chat). No hay paridad 1:1 con `/help`, `/mcp`, `/plugin`, `/schedule`, `/loop`, `/desktop` de
-Claude Code — la configuración de MCP/hooks/skills se edita como fichero, no por slash command.
-Referencia completa: `docs.cursor.com/cli`.
+Comandos útiles en la sesión CLI: `/summarize` (alias `/compress`), `/rewind` (si está habilitado),
+modos `/plan` `/ask`, y los del editor (Plan mode, Agent mode, chat). No hay paridad 1:1 con `/help`,
+`/mcp`, `/plugin`, `/schedule`, `/desktop` de Claude Code — MCP/hooks/skills se editan como fichero
+(salvo skills invocables con `/nombre`). Referencia: `docs.cursor.com/cli`.
 
 ---
 
@@ -109,32 +114,43 @@ sustituto.
 ## 3. Permisos
 
 ```jsonc
-// ~/.cursor/permissions.json (o su equivalente de proyecto)
+// ~/.cursor/permissions.json  y/o  <repo>/.cursor/permissions.json
+// Si ambos existen, Cursor CONCATENA los arrays de cada campo.
 {
-  "allow": [
+  "mcpAllowlist": [
     "serena:find_symbol",
     "playwright:browser_navigate",
     "codegraph:*"
+  ],
+  "terminalAllowlist": [
+    "git",
+    "npm",
+    "pytest"
   ]
 }
 ```
-Allowlist con **glob** (`server:*`, `*:tool`) — no copies el JSON de `allow` de Claude Code
-(`mcp__serena__…`): re-implementa la *política* con este formato. El humano es dueño de las acciones
-externas (push/PR/deploy) → esas no van en `allow`; se refuerzan con rules ("no push sin pedir") + hooks
-(`beforeShellExecution`, §10).
+Campos reales: **`mcpAllowlist`**, **`terminalAllowlist`**, opcional **`autoRun`** (steering del
+clasificador en Auto-review). Formato MCP: `server:tool` con glob (`server:*`, `*:tool`). Cuando el
+fichero define una clave, **sustituye** el allowlist de la UI para ese tipo — no uses un campo inventado
+`"allow"`. No copies el JSON `mcp__serena__…` de Claude Code: re-implementa la *política* con este
+formato. El humano es dueño de push/PR/deploy → no los metas en allowlist a la ligera; refuerza con
+rules + hooks (`beforeShellExecution`, §10).
+
+**Nota:** la **Cursor CLI** tiene permisos aparte en `cli-config.json` (`permissions.allow` /
+`permissions.deny` con sintaxis `Mcp(server:tool)`, `Shell(…)`, etc.). No mezcles los dos ficheros.
 
 ### Las capas que gobiernan el acceso — comparado con Claude Code
 
-1. **`permissions.json`** — el allowlist de arriba (proyecto + usuario, con glob).
-2. **Approvals de la UI / settings del producto** — confirmación interactiva en el editor.
+1. **`permissions.json`** — `mcpAllowlist` / `terminalAllowlist` (usuario ∪ proyecto).
+2. **Approvals de la UI / Run Mode** — confirmación interactiva en el editor.
 3. **Rules** — política declarada en prosa (prevalencia, "no push sin pedir"): no vetan por sí solas, pero
    dirigen el comportamiento del agente de forma consistente.
 4. **Hooks** — un `beforeShellExecution`/`preToolUse` con `permission: "deny"` (o `exit 2`) veta por
    *contenido*, cosa que el allowlist estático no puede (§10).
 
 > Regla-resumen: **Claude Code gestiona un allowlist de nombres de tool** (`mcp__servidor__tool`);
-> **Cursor gestiona lo mismo con `server:tool` + glob**, reforzado por rules y hooks. La *política* — el
-> humano posee lo externo — es idéntica; el mecanismo cambia.
+> **Cursor IDE gestiona lo mismo con `mcpAllowlist: ["server:tool"]`**, reforzado por rules y hooks. La
+> *política* — el humano posee lo externo — es idéntica; el mecanismo cambia.
 
 ---
 
@@ -164,10 +180,10 @@ antes de tu primer prompt: system/agent prompt (oculto, siempre primero) · rule
 tools MCP · luego conversación, ficheros leídos, output de comandos (crece cada turno).
 
 ```text
-/clear                         # nueva sesión, reset entre tareas no relacionadas
-/rewind                        # volver a un mensaje previo
-/summarize                     # resumir y liberar contexto manualmente
+/summarize                     # (alias /compress) resumir y liberar contexto
+/rewind                        # volver a un mensaje previo (CLI; si está habilitado)
 # + anillo de contexto en el editor: uso por bloque
+# + nueva chat / nueva invocación de `agent` entre tareas no relacionadas
 ```
 
 - Cursor **resume automáticamente** al acercarse al límite (además del `/summarize` manual) — no asumas
@@ -205,7 +221,7 @@ Mínimo cacheable ~1.024 tokens (4.096 en Haiku); máx. 4 breakpoints explícito
 **En el producto Cursor** no hay mando expuesto (ni env vars como `ENABLE_PROMPT_CACHING_1H`, ni
 `cache_control` visible) — aplica lo que decida el proveedor del modelo por debajo. Lo que sí controlas:
 `AGENTS.md`/rules pequeños y **estables** (prefijo que no cambia); no editarlos a mitad de sesión; pocos
-MCP activos (bloque de tools estable); `/clear` entre tareas no relacionadas. Si automatizas con la
+MCP activos (bloque de tools estable); nueva sesión/chat entre tareas no relacionadas. Si automatizas con la
 **Cursor SDK** contra la API de Anthropic directamente (§11), sí aplican las reglas de arriba tal cual.
 
 ---
@@ -261,10 +277,9 @@ Ejemplos reales de skills de proyecto: [`ejemplos/skills-plugins/.cursor/skills/
 (`audit`, `deploy-staging`). Pack de metodología con las cuatro skills anteriores:
 [`docs/ai-agents-code-methodology/cursor/skills/`](./docs/ai-agents-code-methodology/cursor/skills/).
 
-> **Lo que YA NO es una brecha frente a Claude Code (agosto 2026):** cuando se escribió la primera guía de
-> adaptación no existían ni Skills ni Marketplace en Cursor — la tabla "qué NO está" de
-> [`ejemplos/README.md`](./ejemplos/README.md) refleja ese snapshot antiguo en algunas filas.
-> Revisa `docs.cursor.com` antes de asumir que algo "no tiene equivalente".
+> **Nota (agosto 2026):** Skills, Marketplace, `.cursor/agents/` y `agent -p` están documentados en
+> `docs.cursor.com`. Si una fila de [`ejemplos/README.md`](./ejemplos/README.md) parece antigua, confía
+> en la doc oficial y en esta guía.
 
 ---
 
@@ -272,22 +287,24 @@ Ejemplos reales de skills de proyecto: [`ejemplos/skills-plugins/.cursor/skills/
 
 Referencia completa + diagrama: [`ejemplos/subagents/`](./ejemplos/subagents/).
 
-**Nativo (Cursor 2.4+):** delegación tipo Task, contexto **aislado** por subagent — a la sesión principal
-vuelve solo el resumen. Se invoca por lenguaje natural o `/nombre`; ejecución en paralelo para trabajo
-independiente. Tipos base documentados de forma laxa — no asumas nombres exactos sin comprobar la doc
-actual.
+**Nativo:** delegación con contexto **aislado** por subagent — a la sesión principal vuelve solo el
+resumen. Se invoca por lenguaje natural o `/nombre`; ejecución en paralelo. Built-ins documentados:
+**Explore**, **Bash**, **Browser** (más tipos Task según versión/entorno). Comprueba
+`docs.cursor.com/subagents` antes de asumir nombres.
 
-**No hay `.claude/agents/*.md` equivalente.** El patrón que funciona: una **plantilla de prompt**
-(opcionalmente respaldada por una skill), guardada como referencia y pegada al lanzar el subagent:
+**Subagents custom — ficheros de definición:**
 ```text
-# ejemplos/subagents/prompts/refactor-scout.md
-Actúa como refactor-scout: usa CodeGraph `codegraph_explore` y LUEGO Serena
-`find_referencing_symbols` antes de proponer el rename. Desambigua por clase.
+.cursor/agents/<nombre>.md     # proyecto (versionable)
+~/.cursor/agents/<nombre>.md   # usuario
+# Compat: .claude/agents/ y .codex/agents/ también se cargan
 ```
-Ejemplos reales: [`security-reviewer`](./ejemplos/subagents/prompts/security-reviewer.md) ·
-[`refactor-scout`](./ejemplos/subagents/prompts/refactor-scout.md) (codifica la regla
-CodeGraph→Serena de la Parte 2). **Gotcha:** el subagent no hereda tu conversación — contexto en el prompt
-de lanzamiento.
+Frontmatter típico: `name`, `description`, opcional `model` (`inherit` / slug), `readonly`,
+`is_background`. Ejemplo listo: [`ejemplos/subagents/.cursor/agents/refactor-scout.md`](./ejemplos/subagents/.cursor/agents/refactor-scout.md).
+
+**Alternativa ligera:** plantilla de prompt / skill al lanzar (sin fichero de agent):
+[`security-reviewer`](./ejemplos/subagents/prompts/security-reviewer.md) ·
+[`refactor-scout`](./ejemplos/subagents/prompts/refactor-scout.md). **Gotcha:** el subagent no hereda tu
+conversación — el contexto va en el prompt de lanzamiento.
 
 **Lo que NO existe: Agent Teams.** Sin lead+teammates+inbox compartido. El sustituto pragmático es
 paralelismo con **Background/Cloud Agents** (`cursor.com/agents` o CLI `agent -p "…" --background`): cada
@@ -299,7 +316,7 @@ rama/fichero antes de lanzar; un humano (o el agente principal) integra resultad
 | Contexto | Aislado; devuelve un resumen | Sesión completa, async, en su rama |
 | Comunicación | Solo resultado → sesión principal | Ninguna entre agentes (sin inbox) |
 | Coste | Bajo | Alto (N sesiones completas) |
-| Config | Prompt/skill al lanzar | `cursor.com/agents` o CLI `--background` |
+| Config | `.cursor/agents/*.md`, prompt o skill | `cursor.com/agents` o CLI `--background` |
 
 ---
 
@@ -351,10 +368,12 @@ push/PR/deploy salvo petición explícita) — también en
 
 Ver [`ejemplos/automation/`](./ejemplos/automation/).
 
-**Headless / piping:**
+**Headless / print mode:**
 ```bash
-tail -200 app.log | agent -p "avísame de anomalías"
-git diff main --name-only | agent -p "revisa por seguridad"
+agent -p "resume los cambios de esta rama"
+agent -p --output-format text "revisa por seguridad los ficheros tocados vs main"
+# Preferible a asumir pipe stdin→prompt (no documentado como en Claude Code):
+agent -p "Lee app.log (últimas ~200 líneas) y avísame si ves anomalías"
 ```
 
 **CI/CD:** **Bugbot** (nativo, revisión de PR sin script propio) o Cursor SDK en tu propio GitHub Action —
@@ -503,11 +522,11 @@ la clase general · rastro durable · el humano posee lo externo.
 ```
 CLAUDE.md (+ jerarquía)              -> AGENTS.md + .cursor/rules/*.mdc
 Skills ~/.claude/skills/             -> .cursor/skills/ (o ~/.cursor/skills/) — MISMO SKILL.md
-Allowlist settings.local.json        -> permissions.json (server:tool + glob)
+Allowlist settings.local.json        -> permissions.json (mcpAllowlist / terminalAllowlist)
 Hooks (exit 0/2, stdin JSON)         -> .cursor/hooks.json (permission JSON, stdin/stdout, failClosed)
 Plan mode                            -> Plan mode (misma disciplina, mismo nombre)
-Subagents (Task) + Agent Teams       -> Cursor Subagents (nativo) — SIN Agent Teams
-claude -p (headless)                 -> agent -p (Cursor CLI)
+Subagents (Task) + Agent Teams       -> .cursor/agents/*.md + built-ins — SIN Agent Teams
+claude -p (headless)                 -> agent -p (Cursor CLI print mode)
 Auto-memory (MEMORY.md)              -> Memories (sistema DISTINTO, no soportar 1:1)
 Agent SDK (query/allowedTools)       -> Cursor SDK (Agent.create + agent.send + run.stream)
 ```

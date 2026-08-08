@@ -379,7 +379,7 @@ def slide_04(prs):
         ("1", "Editor Cursor",
          "Descarga desde cursor.com — macOS / Windows / Linux."),
         ("2", "Cursor CLI (agent)",
-         "curl https://cursor.com/install -fsS | bash — headless-capable."),
+         "curl … | bash (Unix) · irm … | iex (Windows) — headless-capable."),
         ("3", "Background / Cloud Agents",
          "cursor.com/agents — corre tareas en la nube sin editor abierto."),
         ("4", "Multi-repo / workspace",
@@ -411,15 +411,15 @@ def slide_05(prs):
         "Plan mode: propone un plan y tú lo apruebas antes de tocar nada",
         "Ideal para explorar, diseñar, depurar",
     ], ACCENT, 1.6)
-    card(slide, 6.8, 2.05, 5.85, 2.5, "Headless (agent -p) — componible", [
-        "Cursor CLI en modo headless: prompt in, resultado out",
-        "Encaja en tuberías Unix, git hooks y CI",
+    card(slide, 6.8, 2.05, 5.85, 2.5, "Headless (agent -p) — scripts y CI", [
+        "Print mode: prompt in (arg), resultado por stdout",
+        "Combina con --force / --output-format text|json",
         "La base de la automatización (sección 07)",
     ], BLUE, 1.6)
     label(slide, 0.7, 4.71, 11.95, "El mismo Cursor, dos formas de invocarlo")
     code_block(slide, 0.7, 5.05, 11.95, 1.1, [
-        'tail -200 app.log | agent -p "avísame si ves anomalías"',
-        'git diff main --name-only | agent -p "revisa estos ficheros por seguridad"',
+        'agent -p "resume los cambios de esta rama"',
+        'agent -p --output-format text "revisa por seguridad los ficheros tocados vs main"',
     ])
 
 
@@ -451,10 +451,10 @@ def slide_07(prs):
         ".cursor/rules/01-tools.mdc    # @fichero = incluye contenido",
         "AGENTS.md                     # raíz (+ anidado: gana el más",
         "                               # específico), sin frontmatter",
-        "~/.cursor/permissions.json    # allowlist server:tool",
+        "~/.cursor/permissions.json    # mcpAllowlist server:tool",
     ])
     card(slide, 7.0, 1.82, 5.65, 2.55, "Permisos = allowlist, no solo UI", [
-        "permissions.json: proyecto + usuario, con glob (server:*, *:tool)",
+        "permissions.json: mcpAllowlist / terminalAllowlist (glob)",
         "4 modos de rule: Always / Apply Intelligently /",
         "  Apply to Specific Files / Apply Manually",
         "El humano es dueño de push/PR/deploy",
@@ -505,10 +505,10 @@ def slide_09(prs):
 
     label(slide, 8.6, 2.01, 4.05, "Los mandos (CLI + UI del editor)")
     code_block(slide, 8.6, 2.35, 4.05, 2.55, [
-        "agent> /clear      # nueva sesión",
-        "agent> /rewind     # volver a un mensaje previo",
-        "agent> /summarize  # resumir y liberar contexto",
-        ("# + anillo de contexto en el editor (uso por bloque)", MUTED),
+        "agent> /summarize  # liberar contexto",
+        "agent> /rewind     # mensaje previo",
+        ("# nueva chat / nueva invocación de agent", MUTED),
+        ("# + anillo de contexto en el editor", MUTED),
     ])
     line(slide, 0.7, 5.05, 11.95, 0.9, [
         R("El rendimiento degrada ANTES de llenar la ventana: ", 12, TEXT, True),
@@ -602,7 +602,7 @@ def slide_12(prs):
          "Cambia el contexto base → paga impuesto de nuevo"),
         (False, "Muchos servers MCP activos",
          "Bloque de tools grande y cambiante → más contexto fijo"),
-        (True, "Nueva sesión / /clear entre tareas no relacionadas",
+        (True, "Nueva sesión / chat limpio entre tareas no relacionadas",
          "Evita arrastrar transcript infinito"),
         (False, "Asumir que Cursor expone cache_control como la API",
          "No — es un producto distinto; no copies env vars de Claude Code"),
@@ -630,7 +630,7 @@ def slide_13(prs):
         ("P", "Scope project", ".cursor/mcp.json — versionado, compartido con el equipo."),
         ("U", "Scope user",
          "~/.cursor/mcp.json — editable directamente, o vía Settings → MCP."),
-        ("✓", "Permisos", "permissions.json: allowlist server:tool, con glob."),
+        ("✓", "Permisos", "permissions.json: mcpAllowlist / terminalAllowlist."),
         ("★", "Servers que uso", "serena · context7 · playwright · codegraph · supabase."),
     ]
     for i, (badge, title, desc) in enumerate(cards):
@@ -654,7 +654,7 @@ def slide_14(prs):
     cards = [
         ("1", "Tools",
          "Lo que el agente puede hacer: Read/Edit/Shell/Grep + Task + mcp__*. "
-         "Gobernadas por permissions.json."),
+         "Gobernadas por permissions.json (mcpAllowlist)."),
         ("2", "Skills",
          ".cursor/skills/<n>/SKILL.md con frontmatter name+description. "
          "Auto-selección por description."),
@@ -689,21 +689,22 @@ def slide_15(prs):
         "Ejecución en paralelo para trabajo independiente",
         "Tipos base documentados de forma laxa — no asumas nombres exactos",
     ], BLUE, 1.3)
-    label(slide, 6.8, 2.01, 5.85, '"Subagente custom" = plantilla de prompt + skill')
+    label(slide, 6.8, 2.01, 5.85, 'Custom = .cursor/agents/<nombre>.md')
     code_block(slide, 6.8, 2.35, 5.85, 2.2, [
-        ("# Plantilla de prompt (no hay .claude/agents/*.md", MUTED),
-        ("# equivalente): pégala al lanzar el subagent", MUTED),
-        '"Actúa como refactor-scout: usa CodeGraph',
-        " codegraph_explore y LUEGO Serena",
-        " find_referencing_symbols antes de proponer",
-        ' el rename."',
+        ("# .cursor/agents/refactor-scout.md", MUTED),
+        "---",
+        "name: refactor-scout",
+        "description: Scout blast radius before rename",
+        "readonly: true",
+        "---",
+        "Usa CodeGraph y LUEGO Serena…",
     ])
     card(slide, 0.7, 4.75, 5.85, 1.5, "Lo que hay que saber", [
         "Contexto AISLADO: solo el resumen vuelve a tu sesión",
         "NO hereda tu conversación: dale contexto en el prompt de lanzamiento",
     ], ACCENT, 0.6)
-    quote(slide, "Ejemplos portados en ejemplos/subagents/prompts/: security-reviewer "
-                 "y refactor-scout.")
+    quote(slide, "Ejemplo listo: ejemplos/subagents/.cursor/agents/refactor-scout.md "
+                 "(también prompts/ si prefieres pegar al lanzar).")
 
 
 def slide_16(prs):
@@ -748,14 +749,15 @@ def slide_17(prs):
         ("Coste", "Bajo (lo caro muere fuera)", "Alto (N sesiones completas)"),
         ("Úsalo para", "Side-quests: investigar, verificar",
          "Trabajo largo/async, o en paralelo real"),
-        ("Config", "Prompt/skill al lanzar", "cursor.com/agents o CLI --background"),
+        ("Config", ".cursor/agents/*.md, prompt o skill",
+         "cursor.com/agents o CLI --background"),
     ]
     for i, (field, left, right) in enumerate(rows):
         compare_row(slide, 2.45 + 0.62 * i, field, left, right)
     line(slide, 0.7, 5.68, 11.95, 0.5, [
         R("Puente a la Parte 2: ", 11.5, GREEN, True),
         R("GSD (Claude Code) empaqueta roles como subagentes plugin; en Cursor esos "
-          "roles viven como skills/prompts — este proyecto usa el flujo data/changes/, "
+          "roles viven como .cursor/agents/ + skills — este proyecto usa data/changes/, "
           "no GSD (ver Parte 2).", 11.5, MUTED),
     ])
     quote(slide, "Subagent para que el ruido muera fuera; Background/Cloud Agent para "
@@ -796,7 +798,7 @@ def slide_19(prs):
         ("a", "Hooks",
          "Seguridad (.env), formato, type-check bloqueante, veto de push/deploy."),
         ("b", "Headless / CLI",
-         "agent -p en cualquier tubería Unix, git hook o script."),
+         "agent -p en scripts y CI (print mode; --force / --output-format)."),
         ("c", "CI/CD",
          "Bugbot (nativo) para revisión de PR, o Cursor SDK en tu propio GitHub Action."),
         ("d", "Scheduling",
@@ -1086,8 +1088,8 @@ def slide_29(prs):
         "Skills ~/.claude/skills/ → .cursor/skills/ (mismo SKILL.md)",
         "Hooks + settings.local.json → .cursor/hooks.json",
         "Plan mode → Plan mode (misma disciplina)",
-        "Subagents/Agent Teams → Cursor Subagents (sin Teams)",
-        "claude -p (headless) → agent -p (Cursor CLI)",
+        "Subagents/Agent Teams → .cursor/agents/*.md (sin Teams)",
+        "claude -p (headless) → agent -p (Cursor CLI print mode)",
     ], BLUE, 1.85)
     card(slide, 0.7, 4.95, 11.95, 1.25,
          "El starter-kit: CURSOR_ADAPTATION.md (docs/ai-agents-code-methodology/)", [

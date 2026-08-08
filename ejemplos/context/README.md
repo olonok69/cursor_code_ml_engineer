@@ -23,19 +23,21 @@ Un contexto lleno de ruido produce peores decisiones **antes** de llegar al lím
 
 ### Disponible / práctico en Cursor
 
-- **Plan mode** — explorar y diseñar sin ensuciar la sesión de implementación (equivalente cultural a Explore → Plan → Code).
+- **Plan mode** — explorar y diseñar sin ensuciar la sesión de implementación.
 - **Task / subagents** — side-quests con contexto aislado; solo vuelve el resumen ([`../subagents/`](../subagents/)).
 - **Rules lean + punteros** — no pegues `STATUS.md` entero en una rule always-on.
 - **MCP con moderación** — cada server suma tools; apaga lo que no uses ([`../mcp/`](../mcp/)).
-- **Nueva chat / limpiar hilo** — cuando la tarea no está relacionada (análogo cultural a `/clear`).
+- **`/summarize`** (alias `/compress`) — resumir y liberar contexto en CLI / Agent.
+- **`/rewind`** — volver a un mensaje previo (CLI; según config).
+- **Nueva chat / nueva invocación de `agent`** — cuando la tarea no está relacionada.
 
 ### No hay equivalente 1:1 a Claude Code
 
 | Claude Code | Cursor |
 |---|---|
-| `/context` (desglose por bloque) | No hay el mismo comando; inspecciona uso en la UI / sé disciplinado con rules |
-| `/compact [foco]` / auto-compact | Resumen/compactación **no** es el mismo producto; no asumas parity |
-| `/rewind` / checkpoints de edición del agente | Usa **git** como fuente de verdad de rollback |
+| `/context` (desglose por bloque) | Anillo de contexto en la UI del editor; no el mismo comando |
+| `/compact [foco]` / auto-compact | `/summarize` + resumen automático del producto — **no** asumas parity con `/compact` |
+| Checkpoints de edición del agente | Usa **git** como fuente de verdad de rollback |
 | `@import` en `CLAUDE.md` | Ver [`AGENTS.pointers-example.md`](./AGENTS.pointers-example.md) — solo punteros lazy |
 
 ## 3. Buenas prácticas (las que aplicamos de verdad)
