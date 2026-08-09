@@ -1,5 +1,7 @@
 # Metodología real de trabajo con Cursor
 
+> English: [`../metodologia_en/`](../metodologia_en/).
+
 Cómo se aplica la **misma** metodología de 11 etapas del curso (nacida en Claude Code) usando
 **Cursor** como agente. No es una plantilla ideal: es el flujo de producción, con la superficie
 adaptada (rules, skills, MCP, hooks).

@@ -1,5 +1,7 @@
 # Cursor — Guía técnica de implementación (curso en tres partes)
 
+> English version: [`GUIA_TECNICA_EN.md`](./GUIA_TECNICA_EN.md).
+
 > Referencia copy-paste para montar cada pieza. Complementa a
 > [`GUIA_PRESENTACION.md`](./GUIA_PRESENTACION.md) (el hilo narrativo) con el **cómo**.
 > Todos los artefactos ejecutables están en [`ejemplos/`](./ejemplos/);

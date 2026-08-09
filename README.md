@@ -1,5 +1,7 @@
 # Cursor — Curso en tres partes (presentación + guías)
 
+> English version available at [`README_EN.md`](./README_EN.md).
+
 > **Volumen Claude Code:** el curso hermano
 > [`claude_code_ml_engineer`](https://github.com/olonok69/claude_code_ml_engineer) —
 > mismo curso, mismo método, otra herramienta. Este repo es el **volumen Cursor**.
