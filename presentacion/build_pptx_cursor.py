@@ -631,7 +631,7 @@ def slide_13(prs):
         ("U", "Scope user",
          "~/.cursor/mcp.json — editable directamente, o vía Settings → MCP."),
         ("✓", "Permisos", "permissions.json: mcpAllowlist / terminalAllowlist."),
-        ("★", "Servers que uso", "serena · context7 · playwright · codegraph · supabase."),
+        ("★", "Servers del día a día", "serena · context7 · playwright · codegraph (+ supabase opcional)."),
     ]
     for i, (badge, title, desc) in enumerate(cards):
         x = 0.7 if i % 2 == 0 else 6.785
@@ -683,7 +683,7 @@ def slide_14(prs):
 def slide_15(prs):
     slide = chrome(prs, "PARTE 1 · 06 · SUBAGENTS",
                    "Subagents: el ruido muere fuera de tu sesión", 15)
-    card(slide, 0.7, 2.0, 5.85, 2.2, "Feature nativa de Cursor (2.4+)", [
+    card(slide, 0.7, 2.0, 5.85, 2.2, "Feature nativa de Cursor", [
         "Delegación tipo Task: contexto aislado por subagent",
         "Se invoca por lenguaje natural (o /nombre)",
         "Ejecución en paralelo para trabajo independiente",
@@ -750,7 +750,7 @@ def slide_17(prs):
         ("Úsalo para", "Side-quests: investigar, verificar",
          "Trabajo largo/async, o en paralelo real"),
         ("Config", ".cursor/agents/*.md, prompt o skill",
-         "cursor.com/agents o CLI --background"),
+         "cursor.com/agents (UI / handoff &)"),
     ]
     for i, (field, left, right) in enumerate(rows):
         compare_row(slide, 2.45 + 0.62 * i, field, left, right)
@@ -772,8 +772,8 @@ def slide_18(prs):
         "Payload del evento por STDIN, respuesta JSON por STDOUT",
         "Eventos: beforeShellExecution, beforeMCPExecution, beforeReadFile,",
         "  afterFileEdit, preToolUse/postToolUse, beforeSubmitPrompt, stop…",
-        "permission: allow/deny/ask · exit 2 = deny también",
-        "failClosed: si el hook crashea, bloquea (no fail-open)",
+        "permission: prefer deny para gates (ask a menudo se ignora)",
+        "exit 2 = deny también · failClosed si el hook crashea",
     ], ACCENT, 2.2)
     label(slide, 6.8, 2.01, 5.85, "Patrón de bloqueo (JS)")
     code_block(slide, 6.8, 2.35, 5.85, 2.4, [
@@ -810,13 +810,12 @@ def slide_19(prs):
         num_card(slide, x, y, 5.865, 0.95, badge, title, desc, 0.4)
 
     label(slide, 0.7, 4.34, 11.95,
-          "Cursor SDK (@cursor/sdk) — cloud: { repos, autoCreatePR } para PRs automáticos")
+          "Cursor SDK (@cursor/sdk) — Agent.prompt (one-shot) · Agent.create+send (stream/multi-turn)")
     code_block(slide, 0.7, 4.68, 11.95, 1.3, [
         'import { Agent } from "@cursor/sdk";',
-        "const agent = await Agent.create({ apiKey: process.env.CURSOR_API_KEY, "
-        "local: { cwd } });",
-        "const run = await agent.send(prompt);",
-        "for await (const ev of run.stream()) { /* … */ }",
+        "const result = await Agent.prompt(prompt, {",
+        "  apiKey: process.env.CURSOR_API_KEY!, local: { cwd } });",
+        "// multi-turn: Agent.create(...) → agent.send(...) → run.stream()",
     ])
 
 

@@ -30,6 +30,12 @@ y en qué orden. Eso convierte "tengo MCP instalado" en "el agente tira de la to
 | Tickets / lecciones del área | **Skill `kg`** (o STATUS fallback) | history-first antes de grep |
 | Trabajo paralelo independiente | **Task** (explore / generalPurpose) | Sin ensuciar el hilo principal |
 
+## Instalación y smoke (Cursor / demo ILS)
+
+Runbook para configurar las 5 tools (CodeGraph, Serena, Playwright, Context7, kg) y probarlas:
+[`../../docs/ai-agents-code-methodology/AGENT_SETUP_TOOLS.md`](../../docs/ai-agents-code-methodology/AGENT_SETUP_TOOLS.md)
+· en el repo vivo: `document-parser-lambda/AGENT_SETUP_TOOLS.md`.
+
 ## El orden (barato → caro)
 
 1. Orientación: `STATUS.md` + `git`/`gh` + skill **`kg`**

@@ -1,4 +1,4 @@
-# Cursor — Guía de presentación (curso en dos partes)
+# Cursor — Guía de presentación (curso en tres partes)
 
 > Guía narrativa para el curso/workshop. Está pensada para el/la **ponente**: cada sección mapea a un
 > bloque de slides del deck ([`presentacion/`](./presentacion/)) e incluye el hilo a contar,
@@ -21,9 +21,9 @@
 > carpeta [`docs/`](./docs/) es material de referencia de una instalación real donde se aplica la
 > metodología a diario.
 >
-> **Nota de verificación:** el contenido específico de Cursor (Skills, Marketplace, Subagents, CLI
-> headless, hooks, SDK…) se verificó contra `docs.cursor.com` en agosto de 2026. Cursor cambia rápido —
-> antes de dar el curso, revisa si algo se ha vuelto a mover.
+> **Nota de verificación (2ª revisión):** el contenido específico de Cursor (Skills, Marketplace,
+> Subagents, CLI headless, hooks, SDK…) se verificó contra `docs.cursor.com` el **9 de agosto de 2026**.
+> Cursor cambia rápido — antes de dar el curso, revisa si algo se ha vuelto a mover.
 
 ---
 
@@ -92,7 +92,7 @@ irm 'https://cursor.com/install?win32=true' | iex
 Luego, en cualquier proyecto:
 ```bash
 cd tu-proyecto
-agent             # CLI interactiva, primera vez pide login (o agent auth)
+agent             # CLI interactiva; primera vez: agent login (o CURSOR_API_KEY)
 ```
 
 **Los dos modos (la idea que hay que dejar clara):**
@@ -101,10 +101,11 @@ agent             # CLI interactiva, primera vez pide login (o agent auth)
 - **Headless (`agent -p` / `--print`)** — un prompt, resultado por stdout. Para scripts y CI; combina con
   `--force` si debe aplicar edits, y con `--output-format text|json` según el consumidor:
   ```bash
-  agent -p "resume los cambios de esta rama"
-  agent -p --output-format text "revisa por seguridad los ficheros tocados vs main"
+  agent -p --trust "resume los cambios de esta rama"
+  agent -p --trust --output-format text "revisa por seguridad los ficheros tocados vs main"
   # Contenido de un log: pásalo en el prompt o referencia el fichero (no asumas pipe stdin→prompt)
-  agent -p "Lee app.log (últimas ~200 líneas) y avísame si ves anomalías"
+  agent -p --trust "Lee app.log (últimas ~200 líneas) y avísame si ves anomalías"
+  # --trust: primera vez en un workspace (o usa agent login + confiar en interactivo)
   ```
 
 **Superficies:** editor (chat + Agent mode + Plan mode, diffs inline), Cursor CLI (`agent` en terminal —
@@ -233,8 +234,17 @@ Serena y Playwright hablan MCP en ambos productos. Lo único que cambia es dónd
 ```
 Tras editar `.cursor/mcp.json`: **recarga/reinicia Cursor** — no hay hot-reload.
 
-**Los que uso a diario:** `serena` (navegación semántica de código), `context7` (docs de librerías al
-día), `playwright` (verificar la UI en un navegador real), `codegraph` (grafo del código), `supabase`.
+**Los que uso a diario (los 5 de la Parte 2):** `codegraph` (grafo del código), `serena` (navegación
+semántica), `playwright` (UI / contrato en navegador), `context7` (docs de librerías al día), y la skill
+**`kg`** (grafo de tickets vía scripts en el repo — no es un server MCP). `supabase` es solo un ejemplo
+opcional de MCP + secreto por env var — **no** es obligatorio para el curso.
+
+**Verificación en el repo demo (ILS):** checklist completa para que un agente configure e instale las 5
+tools y las smoke-teste →
+[`docs/ai-agents-code-methodology/AGENT_SETUP_TOOLS.md`](./docs/ai-agents-code-methodology/AGENT_SETUP_TOOLS.md)
+y, en el repo vivo, `document-parser-lambda/AGENT_SETUP_TOOLS.md`. Resumen: abrir **ese** repo en Cursor
+(no solo el workspace padre), pin correcto de CodeGraph `--path`, `codegraph` en PATH + **reload**,
+MCP en verde, luego un prompt de prueba por tool.
 
 **Buenas prácticas:** secretos por variable de entorno (nunca en el JSON versionado); el server disponible
 ≠ tool permitida (`permissions.json` sigue controlando el acceso); y — enlaza con la sección 3 — **cada
@@ -318,7 +328,7 @@ agente principal) integra los resultados.
 | Comunicación | Solo resultado → sesión principal | Ninguna entre agentes (sin inbox) |
 | Coste | Bajo (lo caro muere fuera) | Alto (N sesiones completas) |
 | Úsalo para | Side-quests: investigar, verificar | Trabajo largo/async, o paralelismo real |
-| Config | `.cursor/agents/*.md`, prompt o skill al lanzar | `cursor.com/agents` o CLI `--background` |
+| Config | `.cursor/agents/*.md`, prompt o skill al lanzar | `cursor.com/agents` (UI / handoff `&`) |
 
 **Puente a la Parte 2:** GSD (Claude Code, sección 9) empaqueta roles como subagentes-plugin; en Cursor
 esos roles viven como `.cursor/agents/` + skills/prompts — **este proyecto usa el flujo `data/changes/`,
@@ -341,10 +351,11 @@ lo **fuerzas**. Contrato:
 - Eventos: `beforeShellExecution`, `beforeMCPExecution`, `beforeReadFile`, `afterFileEdit`,
   `preToolUse`/`postToolUse`, `beforeSubmitPrompt`, `stop`, y más.
 - Respuesta `{"permission": "allow"|"deny"|"ask", ...}` — **`exit 2` también bloquea**.
+  Para demos/gates de handoff usa **`deny`** (`ask` a menudo se ignora).
 - `failClosed`: si el hook crashea, bloquea (no *fail-open*) — postura más estricta que el `exit 0`
   permite/`exit 2` bloquea de Claude Code, aunque el espíritu es el mismo.
 
-### b) Headless — `agent -p` en scripts y CI (ver sección 1; no asumas pipe stdin→prompt).
+### b) Headless — `agent -p --trust` en scripts y CI (ver sección 1; no asumas pipe stdin→prompt).
 
 ### c) CI/CD — Bugbot (nativo, revisión de PR sin script propio) o Cursor SDK en tu propio GitHub Action.
    Ejemplo de workflow en [`ejemplos/automation/github-action-cursor.yml`](./ejemplos/automation/github-action-cursor.yml).
@@ -357,6 +368,9 @@ lo **fuerzas**. Contrato:
 ### e) Cursor SDK — para workflows a medida:
 ```ts
 import { Agent } from "@cursor/sdk";
+// One-shot (sdk.ts / review.ts)
+const result = await Agent.prompt(prompt, { apiKey: process.env.CURSOR_API_KEY!, local: { cwd } });
+// Multi-turn / stream
 const agent = await Agent.create({ apiKey: process.env.CURSOR_API_KEY, local: { cwd } });
 const run = await agent.send(prompt);
 for await (const ev of run.stream()) { /* … */ }
@@ -489,6 +503,24 @@ antes de renombrar/borrar (desambigua por clase); grep/Read solo para literales.
   [`metodologia/herramientas.md`](./ejemplos/metodologia/herramientas.md).
 
 🗣️ *"La inversión clásica — tirar del modelo para diagnosticar — es justo lo que este orden evita: el modelo verifica; los oráculos diagnostican."*
+
+### Checklist de instalación / smoke (antes de la demo en vivo)
+
+Las tools **no “viven” en `AGENTS.md`**: viven en `.cursor/mcp.json` + CLIs en PATH + skills en
+`.cursor/skills/`. En un workspace multi-repo es frecuente que “no haya tools” porque Cursor abrió el
+padre, el `--path` de CodeGraph apunta a otra máquina, o falta reload tras `npm i -g codegraph`.
+
+Runbook para el agente (instalar, pin de paths, reload, 5 smoke tests):
+[`docs/ai-agents-code-methodology/AGENT_SETUP_TOOLS.md`](./docs/ai-agents-code-methodology/AGENT_SETUP_TOOLS.md)
+· en el repo demo: `D:\repos3\ILS_2\document-parser-lambda\AGENT_SETUP_TOOLS.md`.
+
+| # | Tool | Smoke mínimo |
+|---|---|---|
+| 1 | CodeGraph | `codegraph explore "ExtractorBase"` o MCP `codegraph_explore` |
+| 2 | Serena | `find_referencing_symbols` sobre un método conocido |
+| 3 | Playwright | Abrir `https://example.com` y leer el título |
+| 4 | Context7 | Docs actuales de una lib (p.ej. pytest fixtures) |
+| 5 | kg | `bash data/knowledge-graph/kg_query.sh letter-end` / skill `kg` |
 
 ---
 

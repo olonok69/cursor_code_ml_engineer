@@ -40,7 +40,8 @@ Docs de producto: skill interna `create-hook` / docs Cursor Hooks.
 ## Diferencias que importan
 
 1. **Payload:** Cursor no garantiza `tool_input.file_path` / `tool_response.filePath` de Claude. Los scripts prueban varios campos (`path`, `filePath`, `file_path`, `uri`).
-2. **Bloqueo:** preferible `permission: "deny"` (o `"ask"`) en JSON; `exit 2` también deniega.
+2. **Bloqueo:** para demos y gates de handoff usa **`permission: "deny"`** (fiable). `"ask"` existe en la API pero a menudo se ignora — no lo uses si el demo es “el hook para el push”. `exit 2` también deniega.
 3. **ESM:** los hooks con top-level `await` necesitan `import` (o `.mjs`) para que Node los trate como módulo — ver `block_external.js` / `read_hook.js`.
 4. **`query_hook.js`:** el original llamaba `@anthropic-ai/claude-agent-sdk`. Aquí usa `@cursor/sdk` (`Agent.prompt`). Necesitas `CURSOR_API_KEY` y el paquete instalado — es el ejemplo avanzado; desactívalo si no lo quieres en el curso.
-5. No copies `.claude/settings.json` hooks a Cursor sin reescribir eventos.
+5. **`tsc.js`:** necesita `typescript` en el PATH del proyecto (`npx tsc` / deps locales). Sin `package.json` en esta carpeta de ejemplos, es demo de patrón, no CI listo.
+6. No copies `.claude/settings.json` hooks a Cursor sin reescribir eventos.

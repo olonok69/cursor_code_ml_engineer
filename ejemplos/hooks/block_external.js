@@ -25,13 +25,14 @@ const patterns = [
 ];
 
 if (patterns.some((re) => re.test(command))) {
+  // Demo-reliable: "deny" always blocks. "ask" is in the Cursor API but often ignored in practice.
   process.stdout.write(
     JSON.stringify({
-      permission: "ask",
+      permission: "deny",
       user_message:
-        "Methodology handoff gate: outward-facing command. Approve only if you explicitly want the agent to run it.",
+        "Methodology handoff gate: outward-facing command blocked. Ask a human to run it, or say explicitly that you want the agent to push/deploy.",
       agent_message:
-        "External/irreversible action — wait for human confirmation. Prefer preparing the branch + handover.",
+        "External/irreversible action denied by hook. Prefer preparing the branch + handover; do not git push / gh pr / terraform apply / kubectl apply from the agent unless the human overrides the hook.",
     }),
   );
   process.exit(0);

@@ -1,4 +1,4 @@
-# Cursor — Guía técnica de implementación (curso en dos partes)
+# Cursor — Guía técnica de implementación (curso en tres partes)
 
 > Referencia copy-paste para montar cada pieza. Complementa a
 > [`GUIA_PRESENTACION.md`](./GUIA_PRESENTACION.md) (el hilo narrativo) con el **cómo**.
@@ -7,9 +7,9 @@
 > [`GUIA_TECNICA.md`](https://github.com/olonok69/claude_code_ml_engineer/blob/HEAD/GUIA_TECNICA.md)
 > (repo hermano) — misma estructura y numeración de secciones.
 >
-> **Nota de verificación:** el contenido específico de Cursor (Skills, Marketplace, Subagents, CLI
-> headless, hooks, SDK…) se verificó contra `docs.cursor.com` en agosto de 2026. Cursor cambia rápido —
-> antes de reutilizar esta guía, revisa si algo se ha vuelto a mover.
+> **Nota de verificación (2ª revisión):** el contenido específico de Cursor (Skills, Marketplace,
+> Subagents, CLI headless, hooks, SDK…) se verificó contra `docs.cursor.com` el **9 de agosto de 2026**.
+> Cursor cambia rápido — antes de reutilizar esta guía, revisa si algo se ha vuelto a mover.
 
 ## Índice
 
@@ -54,20 +54,22 @@ curl https://cursor.com/install -fsS | bash
 irm 'https://cursor.com/install?win32=true' | iex
 
 # Arrancar
-cd tu-proyecto && agent          # o: agent auth  si hace falta login
+cd tu-proyecto && agent          # primera vez: agent login  (o CURSOR_API_KEY / --api-key)
+agent status                     # ¿autenticado?
 
 # Headless / print mode (un prompt, stdout)
-agent -p "resume los cambios de esta rama"
-agent -p --output-format text "revisa por seguridad los ficheros tocados vs main"
+agent -p --trust "resume los cambios de esta rama"
+agent -p --trust --output-format text "revisa por seguridad los ficheros tocados vs main"
 # Edits reales en scripts: añade --force (o --yolo)
+# --trust evita el prompt interactivo de Workspace Trust en la primera ejecución headless
 
-# En background (equivalente conceptual a lanzar un Background Agent desde CLI)
-agent -p "…" --background
+# Background/Cloud Agents: cursor.com/agents (o handoff `&` en el producto).
+# No uses `agent -p --background` — ese flag no existe en la CLI actual.
 ```
 Comandos útiles en la sesión CLI: `/summarize` (alias `/compress`), `/rewind` (si está habilitado),
-modos `/plan` `/ask`, y los del editor (Plan mode, Agent mode, chat). No hay paridad 1:1 con `/help`,
-`/mcp`, `/plugin`, `/schedule`, `/desktop` de Claude Code — MCP/hooks/skills se editan como fichero
-(salvo skills invocables con `/nombre`). Referencia: `docs.cursor.com/cli`.
+modos `/plan` `/ask`, y los del editor (Plan mode, Agent mode, chat). MCP: edita `.cursor/mcp.json`
+y gestiona con `agent mcp list|enable|disable|login` (no hay `agent mcp add`). Skills invocables con
+`/nombre`. Referencia: `docs.cursor.com/cli`.
 
 ---
 
@@ -233,17 +235,35 @@ Ver [`ejemplos/mcp/mcp.json.example`](./ejemplos/mcp/mcp.json.example). Scopes: 
 MCP).
 
 ```jsonc
-// .cursor/mcp.json — edición manual, no hay comando "agent mcp add"
+// .cursor/mcp.json — edita el JSON (o UI). CLI: agent mcp list|enable|disable|login
+// Interpolación: ${env:NAME}, ${workspaceFolder}, ${userHome}
 { "mcpServers": {
     "serena": { "command": "uvx", "args": ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server"] },
     "context7": { "url": "https://mcp.context7.com/mcp" },
+    "codegraph": {
+      "command": "codegraph",
+      "args": ["serve", "--path", "${workspaceFolder}", "--mcp"] },
     "supabase": {
       "command": "npx", "args": ["-y", "@supabase/mcp-server-supabase@latest"],
-      "env": { "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}" } }
+      "env": { "SUPABASE_ACCESS_TOKEN": "${env:SUPABASE_ACCESS_TOKEN}" } }
 } }
 ```
-Tras editar: **recarga/reinicia Cursor** — no hay hot-reload. Las tools MCP se permiten/deniegan en
-`permissions.json` (§3) con `server:tool` + glob.
+Tras editar: **recarga/reinicia Cursor** (recomendado; a veces basta Reload Window). Las tools MCP se
+permiten/deniegan en `permissions.json` (§3) con `mcpAllowlist` (`server:tool` + glob).
+
+**Los 5 del día a día (Parte 2):** CodeGraph · Serena · Playwright · Context7 · skill `kg` (scripts del
+repo). Supabase en el ejemplo de abajo es **opcional** (demo de secreto por env).
+
+**Instalar + verificar en el repo demo:** sigue el runbook
+[`AGENT_SETUP_TOOLS.md`](./docs/ai-agents-code-methodology/AGENT_SETUP_TOOLS.md)
+(copia operativa en `ILS_2/document-parser-lambda/AGENT_SETUP_TOOLS.md`). Pasos críticos:
+
+1. Abrir **`document-parser-lambda`** como carpeta (o asegurar que su `.cursor/mcp.json` carga).
+2. `npm i -g @colbymchenry/codegraph@latest` si `codegraph` no está en PATH → **reiniciar Cursor**.
+3. Pin CodeGraph: `"args": ["serve", "--path", "${workspaceFolder}", "--mcp"]`
+   (o ruta absoluta si hace falta, p.ej. `D:/repos3/ILS_2/document-parser-lambda`).
+4. Skills `kg`/`kg-refresh` bajo `.cursor/skills/`; scripts en `data/knowledge-graph/`.
+5. Reload Window → MCP verde → smoke tests de la tabla en `AGENT_SETUP_TOOLS.md` §D.
 
 > **La config da la capacidad; `AGENTS.md`/rules dan el criterio.** Los MCP servers **no** se instalan en
 > `AGENTS.md` — ese fichero es solo prompt, no configuración. Se instalan en `.cursor/mcp.json` /
@@ -307,16 +327,17 @@ Frontmatter típico: `name`, `description`, opcional `model` (`inherit` / slug),
 conversación — el contexto va en el prompt de lanzamiento.
 
 **Lo que NO existe: Agent Teams.** Sin lead+teammates+inbox compartido. El sustituto pragmático es
-paralelismo con **Background/Cloud Agents** (`cursor.com/agents` o CLI `agent -p "…" --background`): cada
+paralelismo con **Background/Cloud Agents** (`cursor.com/agents`, o handoff `&` en el producto): cada
 uno una sesión completa, en su propia rama, **sin mensajería entre agentes**. Particiona el trabajo por
-rama/fichero antes de lanzar; un humano (o el agente principal) integra resultados.
+rama/fichero antes de lanzar; un humano (o el agente principal) integra resultados. **No** uses
+`agent -p --background` — ese flag no existe en la CLI actual.
 
 | | Subagent | Background / Cloud Agent |
 |---|---|---|
 | Contexto | Aislado; devuelve un resumen | Sesión completa, async, en su rama |
 | Comunicación | Solo resultado → sesión principal | Ninguna entre agentes (sin inbox) |
 | Coste | Bajo | Alto (N sesiones completas) |
-| Config | `.cursor/agents/*.md`, prompt o skill | `cursor.com/agents` o CLI `--background` |
+| Config | `.cursor/agents/*.md`, prompt o skill | `cursor.com/agents` (UI / handoff `&`) |
 
 ---
 
@@ -339,15 +360,17 @@ Todo en [`ejemplos/hooks/`](./ejemplos/hooks/). Config en `.cursor/hooks.json` (
 
 **Contrato:** payload del evento por **STDIN** · respuesta **JSON** por STDOUT con
 `{"permission": "allow"|"deny"|"ask", "user_message"?: string}` — **`exit 2` también bloquea**.
+Para demos/gates de handoff usa **`deny`** (`ask` a menudo se ignora en la práctica).
 `failClosed`: si el hook crashea, bloquea (postura más estricta que el fail-open implícito de un hook que
 no responde en Claude Code).
 
 **Eventos disponibles (más granulares que Claude Code):** `preToolUse`, `postToolUse`, `beforeReadFile`,
 `afterFileEdit`, `beforeShellExecution`, `beforeMCPExecution`, `beforeSubmitPrompt`, `stop`, y más.
 
-**Patrón de bloqueo (JS):**
+**Patrón de bloqueo (JS)** — en el repo los scripts son **ESM** (`import` + top-level `await`); el
+snippet mínimo abajo es CJS solo para la pizarra:
 ```js
-// beforeReadFile — bloquear .env
+// beforeReadFile — bloquear .env (versión mínima CJS)
 const p = JSON.parse(require("fs").readFileSync(0, "utf8"));
 if ((p.path || "").includes(".env")) {
   console.log(JSON.stringify({ permission: "deny", user_message: "Bloqueado: no leas .env" }));
@@ -358,8 +381,8 @@ process.exit(0);
 ```
 Payloads reales: [`pre-log.json`](./ejemplos/hooks/pre-log.json),
 [`post-log.json`](./ejemplos/hooks/post-log.json). Ejemplo de veto de handoff:
-[`block_external.js`](./ejemplos/hooks/block_external.js) (`beforeShellExecution` para vetar
-push/PR/deploy salvo petición explícita) — también en
+[`block_external.js`](./ejemplos/hooks/block_external.js) (`beforeShellExecution` → `permission: "deny"`
+para push/PR/deploy) — también en
 [`docs/ai-agents-code-methodology/cursor/hooks/block-external-git.ps1`](./docs/ai-agents-code-methodology/cursor/hooks/block-external-git.ps1).
 
 ---
@@ -383,10 +406,17 @@ ver [`github-action-cursor.yml`](./ejemplos/automation/github-action-cursor.yml)
 merged, PagerDuty. Los **Background/Cloud Agents** (`cursor.com/agents`) son para trabajo async bajo
 demanda, no programado.
 
-**Cursor SDK** (`@cursor/sdk`, v1.0.26 en esta verificación):
+**Cursor SDK** (`@cursor/sdk`):
 ```ts
 import { Agent } from "@cursor/sdk";
 
+// One-shot (lo que usan sdk.ts / review.ts / query_hook.js)
+const result = await Agent.prompt(prompt, {
+  apiKey: process.env.CURSOR_API_KEY!,
+  local: { cwd },
+});
+
+// Multi-turn / stream
 const agent = await Agent.create({ apiKey: process.env.CURSOR_API_KEY, local: { cwd } });
 const run = await agent.send(prompt);
 for await (const ev of run.stream()) {
@@ -397,9 +427,8 @@ Para que el agente trabaje en la nube y abra el PR él mismo: `Agent.create({ cl
 Ejemplo completo: [`sdk.ts`](./ejemplos/automation/sdk.ts) ·
 [`review.ts`](./ejemplos/automation/review.ts) (revisión automática de PR con la SDK).
 
-> **Ojo con la API:** no es `Agent.prompt()` — es `Agent.create()` seguido de `agent.send()` y
-> `run.stream()`. Verifica la firma exacta contra `docs.cursor.com/background-agent/api` antes de dar
-> por buena esta guía si ha pasado tiempo.
+> **Patrones:** `Agent.prompt(...)` = one-shot; `Agent.create` + `send` + `stream` = multi-turn.
+> Verifica la firma exacta contra `docs.cursor.com` / el README de `@cursor/sdk` si ha pasado tiempo.
 
 ---
 
@@ -452,6 +481,10 @@ Claude Code: allowlist hand-curated en `settings.local.json` (`mcp__serena__…`
 ---
 
 ## 13. Herramientas del método
+
+**Setup / smoke de las 5 tools en el repo demo:**  
+[`AGENT_SETUP_TOOLS.md`](./docs/ai-agents-code-methodology/AGENT_SETUP_TOOLS.md) ·
+`D:\repos3\ILS_2\document-parser-lambda\AGENT_SETUP_TOOLS.md`.
 
 ### CodeGraph ([`ejemplos/codegraph/`](./ejemplos/codegraph/)) — inteligencia de código local (vía MCP)
 Índice tree-sitter → SQLite en `.codegraph/` (sin API keys). Devuelve símbolos + rutas de llamada +
@@ -528,7 +561,7 @@ Plan mode                            -> Plan mode (misma disciplina, mismo nombr
 Subagents (Task) + Agent Teams       -> .cursor/agents/*.md + built-ins — SIN Agent Teams
 claude -p (headless)                 -> agent -p (Cursor CLI print mode)
 Auto-memory (MEMORY.md)              -> Memories (sistema DISTINTO, no soportar 1:1)
-Agent SDK (query/allowedTools)       -> Cursor SDK (Agent.create + agent.send + run.stream)
+Agent SDK (query/allowedTools)       -> Cursor SDK (Agent.prompt one-shot; Agent.create+send stream)
 ```
 
 **Bootstrap en el repo destino:**
