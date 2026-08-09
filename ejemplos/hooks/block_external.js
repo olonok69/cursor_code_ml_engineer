@@ -12,7 +12,13 @@ async function readStdin() {
 }
 
 const raw = await readStdin();
-const payload = JSON.parse(raw || "{}");
+let payload = {};
+try {
+  payload = JSON.parse(raw || "{}");
+} catch {
+  process.stdout.write(JSON.stringify({ permission: "allow" }));
+  process.exit(0);
+}
 const command = String(payload.command || "");
 
 const patterns = [

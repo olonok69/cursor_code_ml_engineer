@@ -26,6 +26,7 @@ ejemplos sanitizados, verificados contra `cursor.com/docs` (agosto 2026).
 |---|---|
 | [`GUIA_PRESENTACION.md`](./GUIA_PRESENTACION.md) | Guía narrativa para el/la ponente, en dos partes: hilo a contar por slide + frases de cierre 🗣️ + links al código. |
 | [`GUIA_TECNICA.md`](./GUIA_TECNICA.md) | Referencia de implementación copy-paste (configs, comandos, código), en las mismas dos partes. |
+| [`DEMO_RUNBOOK.md`](./DEMO_RUNBOOK.md) | Cheatsheet de demos live: preflight, comando/click por slide, tiempos y fallos frecuentes. |
 | [`presentacion/Cursor_Presentacion.pptx`](./presentacion/) | El deck (16:9, 36 slides), mismo estilo visual que el deck de Claude Code. |
 | [`presentacion/build_pptx_cursor.py`](./presentacion/build_pptx_cursor.py) | Generador del deck (regenerable). |
 | [`ejemplos/`](./ejemplos/) | Artefactos reales adaptados a Cursor, agrupados por sección del curso — mismo mapeo que los ejemplos del [curso hermano de Claude Code](https://github.com/olonok69/claude_code_ml_engineer/tree/HEAD/ejemplos). |
@@ -39,7 +40,10 @@ ejemplos sanitizados, verificados contra `cursor.com/docs` (agosto 2026).
 - [`ejemplos/prompt-caching/`](./ejemplos/prompt-caching/) — el mecanismo de caching (API Anthropic) + qué controlas de verdad en Cursor (§03).
 - [`ejemplos/mcp/`](./ejemplos/mcp/) — `.cursor/mcp.json` con scopes y secretos por entorno (§04).
 - [`ejemplos/skills-plugins/`](./ejemplos/skills-plugins/) — skills en `.cursor/skills/` (§05).
+  **Live en este repo:** raíz `.cursor/skills/` (`audit`, `audit-python`, `deploy-staging`).
+  **Targets de demo:** [`ex_npm/`](./ex_npm/) (`/audit`) · [`ex_app/`](./ex_app/) (`/audit-python`) · [`ex_staging/`](./ex_staging/) (`/deploy-staging`).
 - [`ejemplos/subagents/`](./ejemplos/subagents/) — plantillas de subagent y el diagrama subagent-vs-Background/Cloud Agent (§06).
+  **Live:** raíz `.cursor/agents/refactor-scout.md`.
 - [`ejemplos/hooks/`](./ejemplos/hooks/) — hooks reales de Cursor (`.cursor/hooks.json`, eventos, permission JSON) + payloads (§07).
 - [`ejemplos/permissions/`](./ejemplos/permissions/) — `permissions.json` con `mcpAllowlist` / `terminalAllowlist` (§02/§03).
 - [`ejemplos/automation/`](./ejemplos/automation/) — GitHub Action con Cursor, Cursor SDK, Automations (§07).

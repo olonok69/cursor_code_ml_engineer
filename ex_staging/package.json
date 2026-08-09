@@ -1,0 +1,16 @@
+{
+  "name": "ex-staging",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tiny Node app for live /deploy-staging skill demos",
+  "type": "module",
+  "scripts": {
+    "test": "node --test test/health.test.js",
+    "build": "node scripts/build.mjs",
+    "deploy:staging": "node scripts/deploy.mjs staging",
+    "staging:stop": "node scripts/staging-stop.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

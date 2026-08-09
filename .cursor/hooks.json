@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "hooks": {
+    "beforeReadFile": [
+      {
+        "command": "node .cursor/hooks/read_hook.js",
+        "failClosed": true
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "node .cursor/hooks/block_external.js",
+        "matcher": "git\\s+push|gh\\s+pr\\s+create|gh\\s+pr\\s+merge|terraform\\s+apply|kubectl\\s+apply",
+        "failClosed": true
+      }
+    ]
+  }
+}
