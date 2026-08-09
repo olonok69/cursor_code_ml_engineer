@@ -19,7 +19,7 @@
 > El detalle de implementación (configs, código copy-paste) está en
 > [`GUIA_TECNICA.md`](./GUIA_TECNICA.md) y en [`ejemplos/`](./ejemplos/). La
 > carpeta [`docs/`](./docs/) es material de referencia de una instalación real donde se aplica la
-> metodología a diario.
+> metodología a diario. **Demos live por slide:** [`DEMO_RUNBOOK.md`](./DEMO_RUNBOOK.md).
 >
 > **Nota de verificación (2ª revisión):** el contenido específico de Cursor (Skills, Marketplace,
 > Subagents, CLI headless, hooks, SDK…) se verificó contra `docs.cursor.com` el **9 de agosto de 2026**.
