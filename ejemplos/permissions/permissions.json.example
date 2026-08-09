@@ -1,0 +1,18 @@
+{
+  "mcpAllowlist": [
+    "serena:find_symbol",
+    "serena:find_referencing_symbols",
+    "playwright:browser_navigate",
+    "playwright:browser_snapshot",
+    "codegraph:*",
+    "context7:*"
+  ],
+  "terminalAllowlist": [
+    "git",
+    "npm",
+    "npx",
+    "pytest",
+    "python",
+    "uvx"
+  ]
+}

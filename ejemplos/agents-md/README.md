@@ -11,7 +11,9 @@ Los ejemplos de esta carpeta muestran el patrón de producción (sanitizado):
 
 ### Nivel 1 — siempre cargado (pequeño)
 
-[`AGENTS.md`](./AGENTS.md) + reglas lean (ver pack
+[`AGENTS.md`](./AGENTS.md) + regla lean de ejemplo
+[`./.cursor/rules/00-lean-memory.mdc`](./.cursor/rules/00-lean-memory.mdc)
+(pack completo en
 [`../../docs/ai-agents-code-methodology/cursor/rules/`](../../docs/ai-agents-code-methodology/cursor/rules/)).
 
 Orientación mínima: qué es el proyecto, mapa de repos y permisos, comandos, convenciones y **punteros

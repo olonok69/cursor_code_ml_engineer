@@ -1,0 +1,10 @@
+---
+description: Keep always-on agent memory lean (AGENTS.md + rules); detail lives in data/changes/
+alwaysApply: true
+---
+
+# Lean memory
+
+- `AGENTS.md` and `.cursor/rules/` stay small: map, gates, one-line pointers.
+- Ticket history, playbooks, sharp edges live under `data/changes/` — read on demand, never paste into always-on files.
+- One canonical ledger per fact (write-once). Rules point; they do not duplicate.

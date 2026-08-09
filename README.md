@@ -41,6 +41,7 @@ ejemplos sanitizados, verificados contra `cursor.com/docs` (agosto 2026).
 - [`ejemplos/skills-plugins/`](./ejemplos/skills-plugins/) — skills en `.cursor/skills/` (§05).
 - [`ejemplos/subagents/`](./ejemplos/subagents/) — plantillas de subagent y el diagrama subagent-vs-Background/Cloud Agent (§06).
 - [`ejemplos/hooks/`](./ejemplos/hooks/) — hooks reales de Cursor (`.cursor/hooks.json`, eventos, permission JSON) + payloads (§07).
+- [`ejemplos/permissions/`](./ejemplos/permissions/) — `permissions.json` con `mcpAllowlist` / `terminalAllowlist` (§02/§03).
 - [`ejemplos/automation/`](./ejemplos/automation/) — GitHub Action con Cursor, Cursor SDK, Automations (§07).
 
 **Parte 2:**
@@ -81,8 +82,8 @@ python presentacion/capture_kg_graph.py        # -> kg_graph.png (mismo grafo de
 
 ## Fuentes
 
-Documentación oficial <https://docs.cursor.com> (verificada agosto 2026 — Cursor cambia rápido, revisa
-antes de reutilizar) · GSD <https://github.com/tomascortereal/claude-code-setup> · CodeGraph
+Documentación oficial <https://docs.cursor.com> (verificada **9 ago 2026**, 2ª revisión — Cursor cambia
+rápido, revisa antes de reutilizar) · GSD <https://github.com/tomascortereal/claude-code-setup> · CodeGraph
 <https://colbymchenry.github.io/codegraph/> · Serena <https://github.com/oraios/serena> · graphify
 <https://graphify.net>.
 

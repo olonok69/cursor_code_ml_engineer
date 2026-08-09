@@ -14,18 +14,18 @@ Claude Code: `tail -200 app.log | claude -p "…"`.
 Cursor CLI print mode (documentado):
 
 ```bash
-agent -p "resume los cambios de esta rama"
-agent -p --output-format text "revisa por seguridad los ficheros tocados vs main"
-# Edits en scripts: agent -p --force "…"
+agent -p --trust "resume los cambios de esta rama"
+agent -p --trust --output-format text "revisa por seguridad los ficheros tocados vs main"
+# Edits en scripts: agent -p --trust --force "…"
 # Preferible a asumir que stdin piped se convierte en prompt (no documentado 1:1):
-agent -p "Lee app.log (últimas ~200 líneas) y avísame si ves anomalías"
+agent -p --trust "Lee app.log (últimas ~200 líneas) y avísame si ves anomalías"
 ```
 
 Equivalente programático: **Cursor SDK** ([`sdk.ts`](./sdk.ts)):
 
 ```bash
 export CURSOR_API_KEY=…   # o configuración del SDK
-npx tsx sdk.ts
+cd ejemplos/automation && npm i && npx tsx sdk.ts
 ```
 
 Patrones:

@@ -38,7 +38,8 @@ if (-not (Test-Path AGENTS.md)) { Copy-Item "$src/AGENTS.md.example" AGENTS.md }
 
 ## Post-install checklist
 
-1. Edit `.cursor/mcp.json`: replace `__REPO_ROOT__` in CodeGraph `--path` with your absolute repo path.
+1. Edit `.cursor/mcp.json`: set CodeGraph `--path` to `${workspaceFolder}` **or** your absolute repo path
+   (bootstrap substitutes `__REPO_ROOT__` with an absolute path when it creates the file).
 2. Ensure CLIs exist: `codegraph`, `uvx` (Serena), `npx` (Playwright).
 3. Run `codegraph init` in this repo; add `.codegraph/` to `.gitignore`.
 4. If you have the ticket knowledge-graph scripts, point the `kg` / `kg-refresh` skills at their real paths (see skill bodies).

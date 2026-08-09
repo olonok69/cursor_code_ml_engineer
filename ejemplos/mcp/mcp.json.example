@@ -18,13 +18,13 @@
     },
     "codegraph": {
       "command": "codegraph",
-      "args": ["serve", "--path", "__REPO_ROOT__", "--mcp"]
+      "args": ["serve", "--path", "${workspaceFolder}", "--mcp"]
     },
     "supabase": {
       "command": "npx",
       "args": ["-y", "@supabase/mcp-server-supabase@latest"],
       "env": {
-        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
+        "SUPABASE_ACCESS_TOKEN": "${env:SUPABASE_ACCESS_TOKEN}"
       }
     }
   }

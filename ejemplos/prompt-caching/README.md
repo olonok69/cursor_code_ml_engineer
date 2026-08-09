@@ -46,3 +46,13 @@ Demo: dos llamadas idénticas; la segunda debe mostrar `cache_read_input_tokens 
   de ese provider; no asumas las env vars de Claude Code.
 
 Docs API: [prompt caching](https://platform.claude.com/docs/en/build-with-claude/prompt-caching).
+
+## Cómo ejecutar la demo
+
+```bash
+pip install anthropic python-dotenv   # dotenv opcional
+# ANTHROPIC_API_KEY en el entorno o en .env (raíz del curso)
+python cache_demo.py
+```
+
+Salida esperada: 1ª llamada escribe cache (`cache_creation > 0`); 2ª lee (`cache_read > 0`).

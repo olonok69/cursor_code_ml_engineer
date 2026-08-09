@@ -36,10 +36,11 @@ foreach ($p in $patterns) {
 }
 
 if ($blocked) {
+    # Demo-reliable: "deny" always blocks. "ask" exists in the API but is often ignored.
     $result = @{
-        permission    = "ask"
-        user_message  = "Methodology handoff gate: this command looks outward-facing (push/PR/deploy). Approve only if you explicitly want the agent to run it."
-        agent_message = "Blocked for human confirmation: external/irreversible action. Prepare the branch and handover instead unless the user explicitly asked for this command."
+        permission    = "deny"
+        user_message  = "Methodology handoff gate: outward-facing command blocked (push/PR/deploy). Have a human run it, or override the hook explicitly."
+        agent_message = "Denied by hook: external/irreversible action. Prepare the branch and handover instead unless the user explicitly asked for this command."
     } | ConvertTo-Json -Compress
     Write-Output $result
     exit 0

@@ -5,8 +5,8 @@ Demo mínima de prompt caching con la API de Anthropic.
 Hace DOS llamadas con el mismo system prompt largo (estable, con cache_control) y
 distinta pregunta (variable, fuera del cache). La 1ª ESCRIBE el cache; la 2ª LEE.
 
-    pip install anthropic
-    export ANTHROPIC_API_KEY=sk-ant-...
+    pip install anthropic python-dotenv   # dotenv opcional
+    export ANTHROPIC_API_KEY=sk-ant-...   # o .env en la raíz del curso
     python cache_demo.py
 
 Salida esperada (números orientativos):
@@ -14,16 +14,22 @@ Salida esperada (números orientativos):
     Llamada 2: cache_creation=0      cache_read=~2100  input=11
     -> la 2ª llamada procesó el prefijo a 0.1x del precio de input.
 
-Claude Code hace exactamente esto por ti en cada turno de una sesión.
+Claude Code / Cursor no te exponen `cache_control` en el producto: lo aplica el proveedor.
+Esta demo habla con la **API de Anthropic** directamente para enseñar el mecanismo.
 """
 import os
 import anthropic
-from dotenv import load_dotenv
-load_dotenv() 
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # pip install python-dotenv  (opcional; también basta con export ANTHROPIC_API_KEY)
+
 client = anthropic.Anthropic()  # usa ANTHROPIC_API_KEY
 
 # --- Prefijo ESTABLE: instrucciones largas (>1024 tokens para ser cacheable). ---
-# En Claude Code, este papel lo juegan el system prompt + tools + tu CLAUDE.md.
+# En un agente (Cursor / Claude Code), este papel lo juegan system + tools + AGENTS.md / CLAUDE.md.
 STABLE_SYSTEM = (
     "Eres un revisor de código senior de un equipo de plataforma. Sigue estas convenciones:\n"
     + "\n".join(

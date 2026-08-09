@@ -14,3 +14,5 @@ examples/
 # Los ejemplos son material didáctico; sin secretos reales.
 #presentacion/build_pptx.py
 .codegraphy/*
+ejemplos/automation/node_modules/
+ejemplos/**/node_modules/

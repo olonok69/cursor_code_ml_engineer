@@ -18,6 +18,7 @@ Guía de adaptación completa: [`../docs/ai-agents-code-methodology/CURSOR_ADAPT
 | [`skills-plugins/`](./skills-plugins/) | Slash commands + skills + plugins | Skills en `.cursor/skills/` + Marketplace Cursor |
 | [`subagents/`](./subagents/) | Task + Agent Teams | `.cursor/agents/` + built-ins (**sin** Agent Teams) |
 | [`hooks/`](./hooks/) | Hooks Claude (`exit 2`) | `.cursor/hooks.json` + permission JSON |
+| [`permissions/`](./permissions/) | Allowlist `settings.local.json` | `permissions.json` (`mcpAllowlist` / `terminalAllowlist`) |
 | [`automation/`](./automation/) | `claude -p` + Agent SDK | `agent -p` + Cursor SDK (`@cursor/sdk`) + Automations |
 | [`codegraph/`](./codegraph/) · [`serena/`](./serena/) | MCP en Claude | Mismos servers vía MCP de Cursor |
 | [`gsd/`](./gsd/) | Plugin GSD | **No hay port oficial** — ver nota |
