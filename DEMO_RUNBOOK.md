@@ -167,7 +167,7 @@ docker ps      # Engine up
 | 26    | GSD                         | **Solo slide** — “no hay port en Cursor; Plan mode + skills”                                                               | gsd               |
 | 27–28 | Playwright / prevalencia    | MCP Playwright smoke (navigate + snapshot) · abrir `ejemplos/metodologia/herramientas.md` · runbook `AGENT_SETUP_TOOLS.md` | metodologia, docs |
 | 29    | Transferencia Claude→Cursor | Abrir `docs/ai-agents-code-methodology/CURSOR_ADAPTATION.md` · carpeta `cursor/` (rules/skills/hooks)                      | pack              |
-| 30    | Sync máquinas               | Abrir `ejemplos/metodologia/machine-sync.md` · `docs/synchro/` (1 pantalla)                                                | synchro           |
+| 30    | Sync máquinas + S3          | Abrir `ejemplos/metodologia/machine-sync.md` (§ evolución) · `docs/synchro/s3-sync/README.md` (1 pantalla)               | synchro           |
 
 
 **Si MCP no está verde:** seguir `docs/ai-agents-code-methodology/AGENT_SETUP_TOOLS.md` (Reload Window, pin CodeGraph path, reiniciar Cursor tras `npm i -g codegraph`).

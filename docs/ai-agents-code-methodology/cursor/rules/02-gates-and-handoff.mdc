@@ -16,11 +16,15 @@ alwaysApply: true
 2. Minimal code to GREEN.
 3. Full relevant suite green; no silent regressions.
 
-## Outbound gate (before “done”)
+## Outbound gate (before “done”) — five checks
 
-1. Reproduce fixed contract on the real output path (wrapper/entrypoint the consumer sees).
-2. Symptom gone; shape matches contract.
-3. Runtime parity check when applicable (deployed image / equivalent).
+1. **Canary the instrument** on a known-answer case before trusting any diagnostic that informs ship.
+2. Reproduce fixed contract on the real output path (wrapper/entrypoint the consumer sees — last writer).
+3. Symptom gone; assert on the **member list**, never on a total alone.
+4. Runtime parity inside the **shipping artifact** when applicable (deployed image / equivalent).
+5. **Look at the output** (rendered), not only at counts — before/after for visual/geometry changes.
+
+State what each gate can and cannot show. Silence on a living contract rule (comply / revise / record) is not an option.
 
 ## Document + sanitise
 

@@ -36,6 +36,7 @@ function Ensure-FileFromTemplate {
 Ensure-FileFromTemplate -Target (Join-Path $changesDir "STATUS.md") -Template (Join-Path $templatesDir "STATUS_TEMPLATE.md")
 Ensure-FileFromTemplate -Target (Join-Path $changesDir "FOLLOWUPS.md") -Template (Join-Path $templatesDir "FOLLOWUPS_TEMPLATE.md")
 Ensure-FileFromTemplate -Target (Join-Path $changesDir "SHARP_EDGES.md") -Template (Join-Path $templatesDir "SHARP_EDGES_TEMPLATE.md")
+Ensure-FileFromTemplate -Target (Join-Path $changesDir "TEST_MAP.md") -Template (Join-Path $templatesDir "TEST_MAP_TEMPLATE.md")
 Ensure-FileFromTemplate -Target (Join-Path $changesDir "_handover_template.md") -Template (Join-Path $templatesDir "HANDOVER_TEMPLATE.md")
 Ensure-FileFromTemplate -Target (Join-Path $changesDir "_qa_acceptance_template.md") -Template (Join-Path $templatesDir "QA_ACCEPTANCE_TEMPLATE.md")
 Ensure-FileFromTemplate -Target (Join-Path $changesDir "_issue_note_template.md") -Template (Join-Path $templatesDir "ISSUE_NOTE_TEMPLATE.md")

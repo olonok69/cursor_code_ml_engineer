@@ -32,7 +32,7 @@
 12. [El flujo y el ejemplo real](#12-metodología)
 13. [Las herramientas: CodeGraph, Serena, GSD](#13-herramientas-del-método)
 14. [Transferir la metodología (starter-kit / de Claude Code a Cursor)](#14-transferir-la-metodología)
-15. [Sincronización de máquinas](#15-sincronización-de-máquinas)
+15. [Sincronización de máquinas (tarball + S3)](#15-sincronización-de-máquinas)
 
 **Parte 3 — El grafo de conocimiento de tickets (graphify)**
 
@@ -102,8 +102,21 @@ Recomendado: partir gates en varios `.mdc` (1 concern por regla, <50 líneas), n
 - **Nivel 1** = `AGENTS.md` + rules `alwaysApply` siempre cargados: orientación + punteros de una línea.
   Pequeño.
 - **Nivel 2** = ficheros bajo `data/changes/` (`STATUS.md`, `PLAYBOOK.md`, `SHARP_EDGES.md`,
-  `CONVENTIONS.md`, `<TICKET>/<TICKET>.md`) que se leen bajo demanda.
+  `TEST_MAP.md`, `CONVENTIONS.md`, `TICKETS.md`, `FOLLOWUPS.md`, `<TICKET>/<TICKET>.md`) que se leen
+  bajo demanda.
 - **Regla write-once:** cada dato en un único ledger canónico; el core lleva el puntero, no la copia.
+- **Nivel 0 (machine-local):** `IDENTITY.md` — qué máquina es esta y qué rol tiene (`publisher` /
+  `contributor`) en el registro compartido (§15B). Gitignored, nunca sincronizado: es el único fichero
+  que **no** debe ser igual en todas partes.
+
+> **El índice también se queda obsoleto.** Sacar contenido del fichero always-loaded a un fichero
+> bajo demanda **no lo actualiza** — hereda la obsolescencia del original y encima *parece* recién
+> escrito. Caso real: una lista de 28 entradas ticket→test se movió a `TEST_MAP.md` y el check de
+> verificación afirmaba "el fichero tiene 28 entradas". Tenía exactamente 28 — y 28 era el número
+> equivocado: en `tests/` había **80** ficheros y la lista se había parado ~40 tickets antes. El
+> recuento no podía fallar porque se derivaba de la misma fuente obsoleta que estaba comprobando.
+> Verifica una lista movida **contra lo que describe** (el filesystem, el código), nunca contra su
+> propia versión anterior.
 
 ### Memories — un sistema DISTINTO
 Cursor genera Memories automáticamente a partir de tus chats — **no** son ficheros versionables que tú
@@ -452,11 +465,44 @@ Diagrama: [`metodologia/flow.png`](./ejemplos/metodologia/flow.png) (fuente `flo
 `render_flow.py`). Caso concreto de principio a fin:
 [`metodologia/EJEMPLO_REAL.md`](./ejemplos/metodologia/EJEMPLO_REAL.md).
 
-> **El gate outbound son tres checks** (no solo "los tests pasan"): (1) reproducir en la **etapa real de
-> salida** —el *wrapper* que reconstruye el contrato, no una función interna `extract()`—; (2) el JSON
-> local casa con el contrato; (3) verificarlo **dentro de la imagen desplegada** (descargar/construir la
-> imagen del runtime, montar el `src`, re-correr). Los tests en verde no son prueba de lo que se despliega.
-> Idéntico en rol al gate de Claude Code — cambia solo qué agente lo ejecuta.
+> **El gate outbound son CINCO checks** (no solo "los tests pasan"):
+> **(0) validar el instrumento de medida antes de fiarte de él** — todo `_diag_*`/`_sweep_*` que informe una
+> decisión de envío se corre primero contra un **caso de respuesta conocida**, y ese resultado se anota junto
+> al hallazgo; nunca envuelvas la medición en tu propio `try/except → return False`;
+> (1) reproducir en la **etapa real de salida** —el *wrapper* que reconstruye el contrato, no una función
+> interna `extract()`—; (2) el JSON local casa con el contrato, y **se verifica sobre la LISTA de miembros,
+> nunca sobre un total**; (3) verificarlo **dentro de la imagen desplegada** (descargar/construir la imagen del
+> runtime, montar el `src`, re-correr); (4) **mirar la salida** renderizada con los ojos antes del PR — para
+> cambios de geometría/highlight, artefactos **antes/después obligatorios**.
+> Los tests en verde no son prueba de lo que se despliega. Idéntico en rol al gate de Claude Code — cambia
+> solo qué agente lo ejecuta.
+>
+> **Tres formas de que un gate verde no pruebe nada** — las tres nos han mordido:
+> **Instrumento roto.** Saltarse el constructor para probar un predicado barato deja sin asignar todo atributo
+> que no pensaste en poner; si el método lo lee y tiene su propio `try/except`, el error se traga y vuelve como
+> un `False` plausible. El sondeo entonces reporta un "no" uniforme y confiado para **todos** los casos. Canario
+> con respuesta conocida, siempre.
+> **Total que cuadra.** Un recuento que coincide con lo esperado **no** es un test que pasa: un elemento de más
+> y uno de menos se cancelan. Afirma sobre **títulos/ids**, no sobre `len(...)`; y donde el fix tiene dirección
+> conocida, mide un **delta** contra baseline (ganados/perdidos), no dos totales. Cuanto más cerca cae un
+> número del esperado, **más** sospechoso, no menos.
+> **Gate que no podía fallar.** Si el corpus de referencia no contiene ningún ejemplo positivo de la forma que
+> acabas de tocar, la pasada limpia demuestra **no-regresión y nada más**. Dilo explícitamente y nombra qué
+> sostiene entonces la evidencia de corrección. (Caso real: un detector que dispara en **0 de 190** documentos
+> del corpus — `fires=0` se lee idéntico si el código es correcto o si está completamente roto.)
+>
+> **El contrato de salida es un documento vivo.** Cuando un cambio altera lo que se emite, consulta la regla que
+> lo gobierna **antes** de diseñar el fix y haz exactamente una de tres cosas: **cumplirla**, **revisarla** como
+> parte del mismo cambio, o **registrar** por qué queda fuera de su alcance. Las tres son válidas; **el silencio
+> no**. Revisar es normal: que un fix correcto destape que una regla acordada estaba mal es *cómo mejora* el
+> contrato. Dos notas prácticas: cita la regla por **identificador estable** (nunca por ruta de fichero — las
+> rutas locales no resuelven para quien lo lee en un ticket), y no lo conviertas en un gate de CI: la decisión
+> es de **tres valores** y un check binario bloquearía justamente el resultado correcto de "revisar la regla".
+>
+> **¿De dónde sale el número "esperado"?** "El otro entorno devuelve X" es evidencia **sobre ese entorno**,
+> nunca una especificación — y si ese entorno corre el mismo camino de código que estás arreglando, casarlo
+> reproduce el bug. Deriva el objetivo de la estructura del documento y del contrato, y dilo claramente cuando
+> la expectativa del ticket esté mal (caso real: el ticket decía 12; la respuesta correcta era 13).
 
 ### Prevalencia de tools (ver [`metodologia/herramientas.md`](./ejemplos/metodologia/herramientas.md))
 Las rules `.cursor/rules/` y `AGENTS.md` no solo dicen *qué* hacer, sino **con qué tool y en qué orden**
@@ -588,6 +634,13 @@ contrato de salida · comandos de test scoped · un issue completo con RED→GRE
 
 ## 15. Sincronización de máquinas
 
+Dos mecanismos, y **no** compiten: **(A)** tarball+USB para el *bring-up completo* de una
+máquina, y **(B)** almacenamiento compartido (S3) para el *registro de ingeniería del día a
+día*. (B) es el cambio reciente y es lo que se usa a diario; (A) sigue siendo el camino
+cuando hay que levantar una máquina desde cero.
+
+### A. Bring-up completo: tarball + USB (asimétrico)
+
 Procedimiento real (sanitizado) que aplica los mismos principios a una tarea de ops
 (ver [`metodologia/machine-sync.md`](./ejemplos/metodologia/machine-sync.md);
 runbooks de la instalación real en [`docs/synchro/`](./docs/synchro/)). El runbook original nació en
@@ -637,6 +690,46 @@ escrituras git a remoto (nada de push/merge/PR); STOP y preguntar ante ambigüed
 **no** va en el bundle (reinstalar en destino + `aws sso login`) — igual el CLI de CodeGraph y el índice
 `.codegraph/`, que repone `target-setup.sh`. El humano es dueño de las acciones
 externas; el agente prepara y reporta con evidencia (conteos de ficheros, estados de PR).
+
+### B. El registro compartido: `data/` sobre S3
+
+El tarball resuelve **transporte**, no **compartir**. Con una tercera máquina y una segunda
+persona aparecen tres costes: el registro es gitignored → **no se puede enlazar** desde un
+ticket/PR; moverse degenera en empaquetarlo todo; y cada compañero acaba con **su propio
+índice privado** de la misma historia. Runbook completo:
+[`docs/synchro/s3-sync/README.md`](./docs/synchro/s3-sync/README.md).
+
+```bash
+# Dry-run es el DEFAULT: no se transfiere nada hasta --go
+./data-pull.sh            # preview  ->  ./data-pull.sh --go
+./data-push.sh            # preview  ->  ./data-push.sh --go
+./mount-data.sh           # vista compartida en vivo, SOLO LECTURA (~/s3-<name>-data)
+./validate.sh             # una máquina no está lista hasta que imprime MACHINE READY
+```
+
+| Regla | Por qué |
+|---|---|
+| Alcance estrecho: solo `changes/**/*.md` + grafo | Confidencialidad y tamaño. **Nada** de documentos de cliente, fixtures ni binarios sin firma del dueño del bucket. |
+| **Escribe por sync, lee por mount de solo lectura** | El almacenamiento de objetos no tiene locking ni rename atómico: un mount escribible corrompe y se descubre semanas después. |
+| Dry-run por defecto; `--delete` es opt-in aparte | Un espejo exacto desde una vista local vieja **borra** lo que un compañero acaba de empujar. |
+| Docs = fuente de verdad; el grafo es **derivado** | Los ficheros por ticket casi nunca chocan; el grafo generado es el único punto real de contención → reconstruir en local (skill `kg-refresh`) o **un solo publisher**. |
+| Versionado del bucket activado | Red de recuperación, antes del primer accidente y no después. |
+
+**Lo específico de agentes — la máquina tiene rol.** En cuanto el mismo registro es
+alcanzable desde varias máquinas con permisos distintos, la sesión debe saber **dónde está y
+qué puede hacer** *antes* de actuar; si no, una máquina *contributor* republicará el grafo
+compartido —lo único que no debe hacer— y lo reportará como trabajo hecho. Cada máquina
+declara `MACHINE_NAME`/`MACHINE_ROLE` en su `config.env`, `identity.sh --write` genera un
+`IDENTITY.md` **machine-local** (con checks en vivo: cuenta autenticada, bucket alcanzable,
+mount presente) y el `AGENTS.md` **apunta a él**, así que toda sesión lee su rol primero.
+`IDENTITY.md` es el único fichero que **no** debe ser igual en todas partes: gitignored,
+nunca sincronizado, nunca empaquetado.
+
+> **Antes del primer push compartido:** limpiar credenciales incrustadas en los docs. No es
+> hipotético — las notas de investigación capturan URLs firmadas y tokens **a propósito**,
+> como evidencia de un bug, y son exactamente las cadenas que no quieres en almacenamiento
+> compartido. Pasar el escáner de sanitización (skill `sanitise-diff`) sobre **todo** el
+> registro, no sobre un diff.
 
 ---
 

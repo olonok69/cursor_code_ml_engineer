@@ -24,11 +24,12 @@ This file lists all artifacts included in the portable methodology package.
 2. `templates/STATUS_TEMPLATE.md`
 3. `templates/FOLLOWUPS_TEMPLATE.md`
 4. `templates/SHARP_EDGES_TEMPLATE.md`
-5. `templates/ISSUE_NOTE_TEMPLATE.md`
-6. `templates/HANDOVER_TEMPLATE.md`
-7. `templates/QA_ACCEPTANCE_TEMPLATE.md`
-8. `templates/COPILOT_WORKING_AGREEMENT_TEMPLATE.md`
-9. `templates/CURSOR_WORKING_AGREEMENT_TEMPLATE.md`
+5. `templates/TEST_MAP_TEMPLATE.md`
+6. `templates/ISSUE_NOTE_TEMPLATE.md`
+7. `templates/HANDOVER_TEMPLATE.md`
+8. `templates/QA_ACCEPTANCE_TEMPLATE.md`
+9. `templates/COPILOT_WORKING_AGREEMENT_TEMPLATE.md`
+10. `templates/CURSOR_WORKING_AGREEMENT_TEMPLATE.md`
 
 ## Cursor surface pack (`cursor/`)
 

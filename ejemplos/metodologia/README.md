@@ -9,7 +9,8 @@ adaptada (rules, skills, MCP, hooks).
 | [`WORKFLOW.md`](./WORKFLOW.md) | Las 11 etapas + memoria de dos niveles, con tools en Cursor. |
 | [`EJEMPLO_REAL.md`](./EJEMPLO_REAL.md) | Un caso concreto (campo vacío) por las 11 etapas. |
 | [`herramientas.md`](./herramientas.md) | Prevalencia: CodeGraph, Serena, Playwright, skill `kg`, oráculos. |
-| [`machine-sync.md`](./machine-sync.md) | Runbook de ops (origen Claude); nota de adaptación Cursor al inicio. |
+| [`machine-sync.md`](./machine-sync.md) | Runbook de ops (tarball bring-up + evolución a S3); nota de adaptación Cursor al inicio. |
+| [`../../docs/synchro/s3-sync/README.md`](../../docs/synchro/s3-sync/README.md) | Registro de ingeniería compartido sobre S3 (sync vs mount, roles, identidad). |
 | [`../../docs/KNOWLEDGE_GRAPH.md`](../../docs/KNOWLEDGE_GRAPH.md) | Grafo de tickets (graphify) — scripts iguales; skill `kg` en Cursor. |
 | [`../../docs/ai-agents-code-methodology/CURSOR_ADAPTATION.md`](../../docs/ai-agents-code-methodology/CURSOR_ADAPTATION.md) | Pack completo de adaptación. |
 | [`flow.png`](./flow.png) | Diagrama del flujo. |

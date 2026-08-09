@@ -1,5 +1,13 @@
 # Un runbook real: sincronizar el workspace entre máquinas
 
+> **Nota de estado (actualizado).** Este runbook de tarball + USB sigue siendo válido y es
+> el camino para un **bring-up completo** de una máquina nueva. Pero ya **no** es la forma
+> de mantener sincronizado el registro de ingeniería del día a día: eso pasó a
+> **almacenamiento compartido (S3)**. Salta a
+> [§ Evolución: del tarball al almacenamiento compartido](#evolución-del-tarball-al-almacenamiento-compartido)
+> al final para ver qué cambió y por qué. Lo de abajo se lee igual: los principios que
+> ilustra (contexto lean, ops con guardrails, "descubre, no asumas") no cambiaron.
+>
 > ## Adaptación Cursor (léeme primero)
 >
 > Este runbook nació en un entorno **Claude Code** (`~/.claude`, skills `/kg`, `CLAUDE.md`).
@@ -175,3 +183,57 @@ Reúne los principios de la metodología en una tarea de **ops**, no de código:
 
 > Detalle completo (todos los pasos, la tabla de machine-facts, los gotchas de `hash -r` y del shadowing
 > del CLI) en el `RUNBOOK.md` original del proyecto. Aquí va lo reutilizable y sanitizado.
+
+## Evolución: del tarball al almacenamiento compartido
+
+El runbook de arriba resuelve **transporte** entre dos máquinas tuyas. No resuelve
+**compartir**. En cuanto aparecen una tercera máquina y una segunda persona, tres
+costes se vuelven evidentes:
+
+- El registro vive en un directorio gitignored → **no se puede enlazar** desde un
+  ticket, un PR ni un documento de aceptación: la ruta solo resuelve en tu máquina.
+- Moverse entre máquinas degenera en *empaquetar todo y copiarlo*: lento, fácil de
+  olvidar y silenciosamente incompleto.
+- Cada compañero se construye su **propio índice privado** de la misma historia
+  supuestamente compartida. El "registro único durable" deja de existir en cuanto
+  hay dos personas.
+
+La respuesta es poner el registro en **almacenamiento de objetos compartido**, con un
+modelo de operación. El modelo importa más que la tecnología:
+
+| Regla | Por qué |
+|---|---|
+| **Alcance estrecho**: solo `changes/**/*.md` + el grafo | Confidencialidad y tamaño. Ensanchar después es fácil; retraer, no. |
+| **Escribe por sync, lee por mount de solo lectura** | El almacenamiento de objetos **no** tiene locking ni rename atómico. Un mount escribible invita a corrupción que aparece semanas después. |
+| **Dry-run por defecto**, `--go` explícito; `--delete` aparte | El caso normal es que un compañero esté empujando a la vez; un espejo exacto desde una vista local vieja **borra su trabajo**. |
+| **Los docs son la fuente de verdad; el grafo es derivado** | Los ficheros por ticket casi nunca chocan. El grafo generado es el **único** punto real de contención → o se reconstruye en local, o lo publica **una** máquina. |
+| **Cada máquina declara su identidad** | Ver abajo: es lo específico de trabajar con agentes. |
+
+### Lo específico de los agentes: la máquina tiene rol
+
+Este detalle solo aparece cuando el mismo registro es alcanzable desde varias máquinas
+con **permisos distintos**, y es el más fácil de pasar por alto: una sesión del agente
+tiene que saber **en qué máquina está y qué le está permitido** *antes* de actuar. Si
+no, una máquina *contributor* reconstruirá y republicará el grafo compartido —
+exactamente lo único que no debe hacer— y encima lo reportará como trabajo bien hecho.
+
+La solución es pequeña: cada máquina declara `MACHINE_NAME` y `MACHINE_ROLE` en su
+config, se genera un `IDENTITY.md` **machine-local** (con comprobaciones en vivo: qué
+cuenta está autenticada, si el bucket responde, si el mount está montado), y el
+`AGENTS.md` del repo (o `CLAUDE.md` en Claude Code) **apunta a él**, así que toda
+sesión lee su propio rol primero. `IDENTITY.md` es el único fichero que **no** debe
+ser igual en todas partes: gitignored, nunca sincronizado, nunca empaquetado.
+
+> Runbook completo y sanitizado (modos de acceso, roles, orden de bring-up, checklist
+> previa al primer push): [`../../docs/synchro/s3-sync/README.md`](../../docs/synchro/s3-sync/README.md).
+> El principio genérico, sin herramientas:
+> [`../../docs/ai-agents-code-methodology/TECHNICAL.md`](../../docs/ai-agents-code-methodology/TECHNICAL.md) §7.
+
+### Qué sigue valiendo del tarball
+
+El bring-up completo de una máquina nueva. El almacenamiento compartido trae los
+**docs y el grafo**; no trae el workspace, ni la superficie del agente (`.cursor/` /
+`~/.claude`), ni los venvs, ni el índice de navegación. Para eso el bundle +
+`target-setup.sh` de arriba sigue siendo el camino — y los guardrails del aterrizaje
+conducido por agente (no-destructivo, sin escrituras a remoto, backup antes de
+sobrescribir, STOP ante ambigüedad) se aplican igual.
