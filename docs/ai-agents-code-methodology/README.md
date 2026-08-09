@@ -6,14 +6,25 @@
 > the rest, ignore what doesn't fit your stack. The value is in the
 > *shape* of the workflow and the guardrails, not the specific tools.
 >
-> **This revision (latest)** adds five things we learned the hard way since
-> the first draft: discriminate a *pre-existing* defect from one you just
-> caused before owning it; confirm root cause with a **free, deterministic**
-> probe before spending on an expensive model run; treat an **automated
-> reviewer** as a first-class loop participant; **sanitise** every change of
-> names/IDs/attribution before handing it off; and keep the agent's
+> **Earlier revisions** added: discriminate a *pre-existing* defect from one
+> you just caused before owning it; confirm root cause with a **free,
+> deterministic** probe before spending on an expensive model run; treat an
+> **automated reviewer** as a first-class loop participant; **sanitise** every
+> change of names/IDs/attribution before handing it off; and keep the agent's
 > always-loaded context **lean** — write each record once, push detail to
-> on-demand references. They're woven into the sections below.
+> on-demand references.
+>
+> **This revision** is mostly about the *gates* — because the thing that
+> surprised us most was how often a gate looked green while proving nothing.
+> Four additions: **validate your measuring instrument** against a
+> known-answer case before you trust what it tells you; **check the
+> composition, not the total** (a matching count is the most common way a
+> missing item ships); **say what a gate cannot show**, because a clean run
+> over inputs that can't exercise your change is not validation; and **verify
+> inside the artifact that actually ships**, not just on your machine. Plus one
+> structural addition: how to **share the durable trail** across several
+> machines and teammates once it outgrows a single laptop — and the identity
+> problem that appears the moment an agent can run in more than one role.
 
 ---
 
@@ -107,6 +118,23 @@ You don't need a specific vendor's tools — these are *roles* to fill:
    on demand, not in the file it carries every turn. (The failure this
    prevents: the same change copied into three places, drifting out of sync,
    and inflating every future session's context.)
+6. **A shared home for that trail**, once more than one machine or more than
+   one person is involved. The trail usually lives in a directory kept out of
+   version control on purpose — which means it can't be linked from a ticket,
+   it only travels between your machines by copying archives around, and every
+   teammate quietly builds their own private copy of what was supposed to be a
+   shared history. Putting it in shared storage fixes all three, with three
+   rules that keep it safe: share **engineering records only** (not customer
+   data, fixtures, or binaries), **write through an explicit sync and read
+   through a read-only view**, and treat the written records as the source of
+   truth with any generated index **derived** from them by a single publisher.
+7. **A way for the agent to know which machine it is on.** This one only
+   appears once step 6 exists, and it is easy to miss: if the same trail is
+   reachable from several machines that have *different permissions*, a session
+   must read its own machine's role before it acts — otherwise a machine that
+   should only consume the shared index will helpfully rebuild and republish
+   it. A small machine-local identity card, pointed at from the orientation
+   doc, is enough.
 
 ---
 
@@ -154,7 +182,17 @@ You don't need a specific vendor's tools — these are *roles* to fill:
 6. **Verify — against the contract, with evidence.** Run the unit, scoped,
    and regression suites. Then the **outbound gate**: reproduce the *fixed*
    output contract locally and confirm the original symptom is gone. "No
-   local proof = not done."
+   local proof = not done." Four things decide whether this gate is real:
+   *validate the instrument* (any diagnostic informing a ship decision is
+   first run against a case whose answer you already know); *check the
+   composition, not the total* (assert on the list of things produced, because
+   a count that matches the expectation routinely hides a missing item);
+   *state what the gate cannot show* (if your reference set contains no
+   example of the case you just changed, the clean run proves no-regression
+   and nothing about correctness — say so, and name what does carry the
+   evidence); and *finish in the shipping artifact* (re-run the reproduction
+   inside the container/bundle that actually deploys, then look at the real
+   output by eye — rendered, not counted).
 7. **Document — the why, the what, the handover.** A per-task writeup
    (root cause, fix, verification), an update to the current-state docs,
    acceptance criteria framed for whoever signs off, and a handover note.
@@ -174,9 +212,11 @@ You don't need a specific vendor's tools — these are *roles* to fill:
     false positives *with a reason*. A bot's finding is a finding — don't
     merge over it unaddressed.
 11. **Persist — close the loop.** Update the central follow-up registry and
-    memory (kept lean — a snapshot and an index, not a transcript); if the
-    investigation produced a reusable lesson, write it into a persistent
-    playbook so the same rabbit hole isn't re-walked.
+    memory (kept lean — a snapshot and an index, not a transcript); push the
+    new records to the shared trail so the next machine and the next person
+    start from them; and if the investigation produced a reusable lesson,
+    write it into a persistent playbook so the same rabbit hole isn't
+    re-walked.
 
 ---
 
@@ -196,6 +236,15 @@ someone.
 | **Test-first, zero regressions** | RED → GREEN; full suite green before "done" | Silent regressions; tests that prove nothing because they never failed |
 | **Deterministic check before paid run** | Confirm the hypothesis with a free, repeatable oracle; spend only to verify the finished fix | Burning time/money chasing the wrong cause; non-reproducible "evidence" |
 | **Evidence before claims** | Never say "fixed/passing" without showing the command output | Confident false "done" — the most corrosive AI failure mode |
+| **Validate the instrument** | Any diagnostic that informs a ship decision is first run on a known-answer case; never wrap the measurement in a catch-all that returns "no" | A broken probe reporting a confident, uniform result that reads exactly like evidence |
+| **Composition, not totals** | Assert on the list of items produced, not on how many; use a delta against a baseline where the fix has a direction | A count that matches the expectation while an item is silently missing inside it |
+| **Say what a gate cannot show** | If the reference set can't exercise the change, state that the run proves no-regression only, and name what carries the correctness evidence | A structurally-incapable gate reported as validation |
+| **Verify in the shipping artifact** | Re-run the contract reproduction inside the container/bundle that deploys, and look at the rendered output | "Green on my machine" shipping an environment-only defect |
+| **The contract is a living document** | On any change to emitted output: comply with the governing rule, revise it, or record why it's out of scope — pick one out loud | A rule that was wrong on day one quietly outliving everyone who remembers it |
+| **Question the expected value** | Ask where a stated "expected" number came from; another environment's output is diagnosis, not specification | Faithfully reproducing the bug you were asked to fix |
+| **Write via sync, read read-only** | The shared trail is written through an explicit sync and browsed through a read-only view | Silent corruption from a writable object-storage mount with no locking |
+| **One publisher for derived artifacts** | Written records are the source of truth; a generated index has exactly one publishing machine | Two machines clobbering the shared index nobody then trusts |
+| **The agent reads its machine's role first** | Each machine declares an identity the session reads before acting | A machine doing the one thing its role forbids, helpfully |
 | **Sanitise before handoff** | Mechanically scan the change for names/IDs/secrets/attribution | A confidential detail or secret entering the permanent record |
 | **Automated review is review** | Triage a bot's findings like a human's before merge | Merging over a valid, machine-flagged defect |
 | **Lean always-loaded context** | Keep the per-turn orientation doc + memory a snapshot + pointers; detail lives on-demand; write each record once | Ever-growing context cost; the same fact triplicated and drifting |
@@ -237,6 +286,18 @@ that neutralises each of those — a *plan gate*, a *generality bar*, a
 - **Owning a bug you didn't cause.** Reproduce on the pre-change state
   first. "It broke after my change" and "my change broke it" are not the
   same claim.
+- **Trusting a number you didn't sanity-check the source of.** Both kinds:
+  the *measurement* (has this probe ever produced a known-correct answer?) and
+  the *target* (where did "expected: 12" come from, and does that source run
+  the same code we're fixing?). A uniform result across every input is a
+  symptom, not a finding.
+- **Letting the count stand in for the content.** "We got the expected number"
+  is the sentence that precedes most silently-missing items. Look at the list.
+- **Calling a run that couldn't have failed a validation.** Know which of your
+  gates were actually capable of catching this change, and say so.
+- **Stopping at "the tests pass."** The tests ran on your machine; the thing
+  you're shipping is the artifact. Finish the last mile, and look at the
+  output rather than counting it.
 
 ---
 

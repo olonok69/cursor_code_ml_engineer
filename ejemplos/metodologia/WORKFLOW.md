@@ -22,7 +22,8 @@
 4. **Investigar** — CodeGraph → Serena → oráculo `_diag_*.py` antes de gastar el modelo en diagnosticar.
 5. **Plan** — **Plan mode** de Cursor; acuerdo humano explícito; opciones rechazadas escritas.
 6. **Implementar** — Agent mode; TDD RED → GREEN; cambio mínimo.
-7. **Verificar** — unit + scoped + regresión; outbound: wrapper + JSON local + imagen Docker.
+7. **Verificar** — unit + scoped + regresión; outbound (**cinco checks**): validar el instrumento ·
+   wrapper · JSON local (lista de miembros, no total) · imagen Docker · mirar la salida.
 8. **Documentar** — write-once en `data/changes/`.
 9. **Sanitizar** — skill `sanitise-diff` sobre líneas **añadidas** del staged diff.
 10. **Handoff** — el agente **no** hace push/PR/deploy salvo petición explícita (hook

@@ -14,7 +14,8 @@ ejemplos sanitizados, verificados contra `cursor.com/docs` (agosto 2026).
   automatización (hooks, Bugbot, Cursor SDK, Automations).
 - **Parte 2 — La metodología (agnóstica de la herramienta):** el flujo real de 11 etapas con gates ·
   las herramientas del método (CodeGraph, Serena, GSD, oráculos) · la transferencia — **de Claude Code
-  a Cursor**, el ejemplo más real de este curso · la sincronización de máquinas.
+  a Cursor**, el ejemplo más real de este curso · la sincronización de máquinas **y el registro de
+  ingeniería compartido sobre S3**.
 - **Parte 3 — El grafo de conocimiento de tickets:** el mismo caso completo construido con **graphify**:
   corpus con manifest, pipeline `kg-refresh`, consulta `kg` sin LLM, la visualización real del grafo
   (507 nodos · 35 comunidades) y su enganche en la metodología — las skills `kg`/`kg-refresh` son el
@@ -49,10 +50,10 @@ ejemplos sanitizados, verificados contra `cursor.com/docs` (agosto 2026).
 - [`ejemplos/automation/`](./ejemplos/automation/) — GitHub Action con Cursor, Cursor SDK, Automations (§07).
 
 **Parte 2:**
-- [`ejemplos/metodologia/`](./ejemplos/metodologia/) — **el flujo real de 11 etapas, un ejemplo concreto de principio a fin, la prevalencia de tools** (Serena/CodeGraph/Playwright/AWS/Docker/oráculo determinista), el **gate outbound de tres checks**, el **runbook de ops** (sincronizar el workspace entre máquinas, con las notas de adaptación a Cursor) y el diagrama del flujo (§08, §11).
+- [`ejemplos/metodologia/`](./ejemplos/metodologia/) — **el flujo real de 11 etapas, un ejemplo concreto de principio a fin, la prevalencia de tools** (Serena/CodeGraph/Playwright/AWS/Docker/oráculo determinista), el **gate outbound de cinco checks** (validar el instrumento · contrato vía *wrapper* · lista de miembros, no totales · imagen desplegada · mirar la salida), el **runbook de ops** (sincronizar el workspace entre máquinas — y su evolución a registro compartido — con las notas de adaptación a Cursor) y el diagrama del flujo (§08, §11).
 - [`ejemplos/gsd/`](./ejemplos/gsd/) · [`ejemplos/codegraph/`](./ejemplos/codegraph/) · [`ejemplos/serena/`](./ejemplos/serena/) — las herramientas del método en Cursor, en profundidad (§09).
 - [`docs/ai-agents-code-methodology/`](./docs/ai-agents-code-methodology/) — el starter-kit portable: [`CURSOR_ADAPTATION.md`](./docs/ai-agents-code-methodology/CURSOR_ADAPTATION.md) + superficie lista para copiar en [`cursor/`](./docs/ai-agents-code-methodology/cursor/) (§10).
-- [`docs/synchro/`](./docs/synchro/) — runbooks reales de sincronización entre máquinas (§11).
+- [`docs/synchro/`](./docs/synchro/) — runbooks reales de sincronización: `machine-sync/` (tarball+USB, bring-up completo), `ils-to-main/` (delta de vuelta) y **`s3-sync/`** (el registro de ingeniería compartido sobre S3: sync vs mount de solo lectura, roles publisher/contributor, identidad por máquina) (§11).
 
 **Parte 3:**
 - [`docs/knowledge-graph/`](./docs/knowledge-graph/) — el grafo de conocimiento de tickets, construido con **graphify**: diseño (`design.md`), scripts (`kg_query.sh`, `kg_refresh.sh`, `build_manifest.py`, `stage_corpus.py`), tests, `manifest.txt` y la **salida real** (`output/graph.html` interactivo + `GRAPH_REPORT.md`) — el mismo artefacto que en el curso Claude Code (§12).

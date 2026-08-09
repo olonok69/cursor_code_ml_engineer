@@ -43,7 +43,8 @@ Agent mode: test RED → código mínimo → GREEN.
 
 ### 7 · Verificar
 
-Scoped + regresión byte-idéntica (no-op) + outbound en **tres checks**: wrapper, JSON local, imagen Docker.
+Scoped + regresión byte-idéntica (no-op) + outbound en **cinco checks**: validar el instrumento ·
+wrapper · JSON local (lista de miembros, no total) · imagen Docker · mirar la salida.
 
 ### 8 · Documentar
 

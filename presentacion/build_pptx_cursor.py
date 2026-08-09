@@ -318,7 +318,7 @@ def slide_01(prs):
            "skills & marketplace · subagents · automatización", 13.5, MUTED)],
         [R("PARTE 2 — ", 15, BLUE, True),
          R("La metodología (agnóstica): flujo con gates · CodeGraph / Serena / GSD · "
-           "transferencia · ops", 13.5, MUTED)],
+           "transferencia · ops (machine-sync + S3)", 13.5, MUTED)],
         [R("PARTE 3 — ", 15, GREEN, True),
          R("El grafo de conocimiento de tickets, construido con graphify: pipeline, "
            "skills kg / kg-refresh y el grafo real", 13.5, MUTED)],
@@ -353,7 +353,7 @@ def slide_02(prs):
         "08  El flujo de 11 etapas + ejemplo real",
         "09  Las herramientas del método",
         "10  Transferir: de Claude Code a Cursor",
-        "11  Sincronización de máquinas",
+        "11  Ops: machine-sync + registro S3",
     ])
     column(6.8, 4.75, "PARTE 3 · El grafo de tickets (graphify)", GREEN, [
         "12  Diseño · pipeline · skills kg / kg-refresh · el grafo real",
@@ -826,7 +826,7 @@ def slide_20(prs):
         ["08 · El flujo de 11 etapas + ejemplo real",
          "09 · Las herramientas del método",
          "10 · Transferir: de Claude Code a Cursor",
-         "11 · Sincronización de máquinas"],
+         "11 · Ops: machine-sync + registro compartido (S3)"],
         20)
 
 
@@ -867,7 +867,7 @@ def slide_22(prs):
         ("4", "Investigar: oráculo determinista barato", False),
         ("5", "Plan mode → acuerdo humano explícito", True),
         ("6", "Implementar: TDD RED → GREEN, mínimo", False),
-        ("7", "Verificar: contrato (wrapper) + imagen desplegada", True),
+        ("7", "Verificar: gate outbound ×5 (instrumento → lista → imagen → mirar)", True),
         ("8", "Documentar — cada cosa una vez", False),
         ("9", "Sanitizar — líneas añadidas (skill sanitise-diff)", False),
         ("10", "Handoff: el humano hace push / PR", False),
@@ -1103,28 +1103,27 @@ def slide_29(prs):
 
 def slide_30(prs):
     slide = chrome(prs, "PARTE 2 · 11 · OPS",
-                   "Un runbook real: sincronizar máquinas", 30)
-    card(slide, 0.7, 2.0, 5.85, 2.7, "Outbound — copia completa", [
-        "Un tarball: workspace + ~/.cursor · .aws · .ssh",
-        "-h dereferencia el symlink de .aws (crítico)",
-        "Excluye venvs / node_modules / caches / .codegraph",
+                   "De transportar (tarball) a compartir (S3)", 30)
+    card(slide, 0.7, 2.0, 5.85, 2.55, "A · Bring-up: tarball + USB", [
+        "Outbound = copia completa; inbound = solo delta de data/",
         "USB: mount manual en WSL + verificar byte a byte",
-        "En destino: bootstrap (skill kg) + target-setup.sh rehacen el tooling",
-    ], BLUE, 1.8)
-    card(slide, 6.8, 2.0, 5.85, 2.7, "Inbound — solo delta", [
-        "El código ya está en GitHub → git fetch",
-        "Docs gitignored de data/ + memoria (snapshot-memory) viajan",
-        "En la principal: restore-memory → refresco de skill kg-refresh reconstruye",
-        "backup + diff de STATUS.md; STOP si hubo ediciones propias",
-    ], GREEN, 1.8)
-    card(slide, 0.7, 4.82, 11.95, 1.4,
-         "El landing lo conduce un agente — con guardrails", [
-             "Solo no-destructivo (renombrar, no borrar) · git fetch = única op de red",
-             "El humano hace push / merge; el agente prepara y reporta con evidencia "
-             "(conteos, PRs)",
-         ], ACCENT, 0.5)
-    quote(slide, "La metodología no es solo para código: memoria durable, guardrails y "
-                 "'el humano hace lo externo' también en ops.")
+        "En destino: bootstrap + target-setup.sh rehacen el tooling",
+        "Sigue siendo el camino para levantar una máquina desde cero",
+    ], BLUE, 1.65)
+    card(slide, 6.8, 2.0, 5.85, 2.55, "B · Día a día: registro sobre S3", [
+        "Alcance estrecho: changes/**/*.md + grafo (nada de cliente)",
+        "Escribe por sync; lee por mount de SOLO LECTURA",
+        "Dry-run por defecto; --delete opt-in (no borrar al compañero)",
+        "Docs = fuente de verdad; grafo derivado (un publisher)",
+    ], GREEN, 1.65)
+    card(slide, 0.7, 4.7, 11.95, 1.5,
+         "Lo específico de agentes: IDENTITY.md machine-local", [
+             "Cada máquina declara MACHINE_NAME + MACHINE_ROLE (publisher | contributor)",
+             "AGENTS.md apunta a IDENTITY.md — la sesión lee su rol ANTES de actuar "
+             "(si no, un contributor republica el grafo)",
+         ], ACCENT, 0.55)
+    quote(slide, "Cuando el rastro durable pasa de una máquina a un equipo, el agente "
+                 "tiene que saber en qué máquina está antes de actuar.")
 
 
 def slide_31(prs):
@@ -1282,7 +1281,7 @@ def slide_36(prs):
          "CodeGraph · Serena · oráculos: barato→caro; GSD = el método productizado "
          "(Claude Code)."),
         ("7", "Transferible y hasta en ops",
-         "De Claude Code a Cursor con CURSOR_ADAPTATION.md; machine-sync con guardrails."),
+         "CURSOR_ADAPTATION.md; machine-sync + registro S3 con identidad por máquina."),
         ("8", "El grafo de tickets (graphify)",
          "507 nodos · 35 comunidades: history-first sin LLM, skill kg en cualquier "
          "agente."),

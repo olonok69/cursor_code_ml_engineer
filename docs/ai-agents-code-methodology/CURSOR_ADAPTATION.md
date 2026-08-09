@@ -53,7 +53,7 @@ roles as in the Claude Code setup — they speak MCP in both products.
 | 4 | Investigate | Cheap deterministic oracle before expensive model diagnosis | CodeGraph → Serena → `_diag_*.py` / parser |
 | 5 | Plan | Switch to **Plan** mode; present options; get explicit agreement | Plan mode · write plan into issue note |
 | 6 | Implement | Agent mode; TDD RED → GREEN; minimal diff | Editor tools · pytest / local test runner |
-| 7 | Verify | Unit + scoped + full suite; outbound contract + runtime image if applicable | Tests · Playwright · Docker |
+| 7 | Verify | Unit + scoped + full suite; outbound gate ×5 (canary instrument · contract via last writer · member list not totals · shipping artifact · look at output) | Tests · Playwright · Docker |
 | 8 | Document | Write-once: issue note, STATUS pointer, QA, handover | Templates under `data/changes/` |
 | 9 | Sanitise | Scan **added** staged lines for names/IDs/secrets/attribution | Skill `sanitise-diff` · hook optional |
 | 10 | Hand off | Prepare branch + handover; **do not** push/PR/deploy unless human explicitly asks | Rules + `block-external-git` hook |

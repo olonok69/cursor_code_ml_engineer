@@ -35,7 +35,7 @@ un glob que cambia en silencio. Reglas de pertenencia:
 | Estado de extractores | `data/changes/extractors/*/process.md` |
 | Hubs | `STATUS.md`, `SHARP_EDGES.md`, `FOLLOWUPS.md`, `PLAYBOOK.md`, … |
 | Orientación | `CLAUDE.md`, `CODE_NAVIGATION.md` |
-| Ops | los runbooks de `machine-sync` |
+| Ops | los runbooks de `machine-sync` + el registro compartido `s3-sync` |
 | Memoria | `~/.claude/…/memory/*.md` |
 
 Exclusiones duras: binarios (`.png`/`.json`/`.docx`), copias-stale de un tarball de viaje (`payload/`),
