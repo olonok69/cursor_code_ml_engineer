@@ -1,5 +1,7 @@
 # Cursor — Guía de presentación (curso en tres partes)
 
+> English version: [`GUIA_PRESENTACION_EN.md`](./GUIA_PRESENTACION_EN.md).
+
 > Guía narrativa para el curso/workshop. Está pensada para el/la **ponente**: cada sección mapea a un
 > bloque de slides del deck ([`presentacion/`](./presentacion/)) e incluye el hilo a contar,
 > los puntos clave y una frase de cierre 🗣️ lista para la diapositiva. Audiencia: **técnica /

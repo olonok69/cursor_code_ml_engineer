@@ -23,6 +23,7 @@ Guía de adaptación completa: [`../docs/ai-agents-code-methodology/CURSOR_ADAPT
 | [`codegraph/`](./codegraph/) · [`serena/`](./serena/) | MCP en Claude | Mismos servers vía MCP de Cursor |
 | [`gsd/`](./gsd/) | Plugin GSD | **No hay port oficial** — ver nota |
 | [`metodologia/`](./metodologia/) | Flujo 11 etapas | Mismo flujo + superficie Cursor |
+| [`metodologia_en/`](./metodologia_en/) | (EN) same pack | English: `REAL_EXAMPLE.md`, `tools.md`, EN `flow.png` |
 
 ## Qué NO está (o es distinto) — léelo antes de copiar a ciegas
 

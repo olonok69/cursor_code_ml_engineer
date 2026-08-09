@@ -1,5 +1,7 @@
 # DEMO_RUNBOOK — presentación Cursor (36 slides)
 
+> English version: [`DEMO_RUNBOOK_EN.md`](./DEMO_RUNBOOK_EN.md).
+
 Runbook para el/la **ponente**. Comandos verificados en Windows (PowerShell) el 9 ago 2026.
 Guía narrativa: `[GUIA_PRESENTACION.md](./GUIA_PRESENTACION.md)` · Deck: `[presentacion/Cursor_Presentacion.pptx](./presentacion/Cursor_Presentacion.pptx)`.
 
