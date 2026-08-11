@@ -139,7 +139,9 @@ resuelven con subcomandos idempotentes, no con pasos manuales fáciles de olvida
 
 Para el **agente del portátil**, un único punto de entrada —`LAPTOP_START_HERE.md`— orquesta: restaurar
 el bundle → `bootstrap` → orientación (`AGENTS.md` / rules, skill `kg` history-first) → delta de vuelta.
-El grafo es un artefacto **derivado**: nunca viaja de vuelta; se reconstruye donde esté el corpus actual.
+El grafo es un artefacto **derivado**: se reconstruye donde esté el corpus actual. ⚠️ **Pero el overlay
+de nombres curados sí viaja en ambos sentidos** — vive dentro del árbol generado y no lo regenera nada,
+así que reconstruir sin él deja todas las comunidades sin nombre (ver la tabla de reglas al final).
 
 ## El landing lo conduce un agente — con guardrails
 
@@ -206,7 +208,10 @@ modelo de operación. El modelo importa más que la tecnología:
 | **Alcance estrecho**: solo `changes/**/*.md` + el grafo | Confidencialidad y tamaño. Ensanchar después es fácil; retraer, no. |
 | **Escribe por sync, lee por mount de solo lectura** | El almacenamiento de objetos **no** tiene locking ni rename atómico. Un mount escribible invita a corrupción que aparece semanas después. |
 | **Dry-run por defecto**, `--go` explícito; `--delete` aparte | El caso normal es que un compañero esté empujando a la vez; un espejo exacto desde una vista local vieja **borra su trabajo**. |
-| **Los docs son la fuente de verdad; el grafo es derivado** | Los ficheros por ticket casi nunca chocan. El grafo generado es el **único** punto real de contención → o se reconstruye en local, o lo publica **una** máquina. |
+| **Los docs son la fuente de verdad; el grafo es derivado** | Los ficheros por ticket casi nunca chocan. El grafo generado es el **único** punto real de contención → lo publica **una** máquina. ⚠️ "Reconstruir en local" solo vale si el árbol generado es *puramente* derivado — ver la nota de abajo. |
+| **"Derivado" es del fichero, no de la carpeta** | Dentro del árbol generado vive un fichero **escrito a mano** (los nombres curados de las comunidades) que no lo regenera nada: al reconstruir sobrevivió **menos del 1%**. Clasifica por fichero — *fuente* / *derivado* / *escrito a mano dentro del derivado* — y trata el tercero como fuente. |
+| **Los pares viajan juntos** | El overlay de nombres solo vale contra el grafo del que salió, pero el sync compara **objeto a objeto** → grafo nuevo + nombres viejos = nombres pegados a la comunidad equivocada, **sin error**. Sella el overlay con una **huella del grafo** y que el chequeo falle en ruidoso. |
+| **Coordinar sin locks** | Para pedir un rebuild, cada contribuidor escribe **su propio fichero** en una cola (`refresh_queue/<utc>-<máquina>.request`). Claves distintas nunca colisionan; un fichero de cola compartido se perdería por last-writer-wins. Es además el mismo contrato que consumirá un job programado. |
 | **Cada máquina declara su identidad** | Ver abajo: es lo específico de trabajar con agentes. |
 
 ### Lo específico de los agentes: la máquina tiene rol

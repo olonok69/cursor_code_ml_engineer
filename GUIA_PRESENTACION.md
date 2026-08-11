@@ -433,7 +433,7 @@ Encadenadas por **gates** (los recuadros coral del diagrama); un gate rojo es un
 > código, verify), donde el modelo *piensa y crea*. Tabla coste-por-etapa:
 > [`metodologia/WORKFLOW.md`](./ejemplos/metodologia/WORKFLOW.md).
 
-> **El punto débil resultó ser el gate, no el fix.** Tres formas de que un verde no pruebe nada, las tres
+> **El punto débil resultó ser el gate, no el fix.** Cinco formas de que un verde no pruebe nada, las cinco
 > reales: **(a)** un **instrumento roto** — saltarse el constructor para sondear un predicado deja atributos
 > sin asignar; si el método los lee y tiene su propio `try/except`, el error vuelve como un `False` plausible
 > y el sondeo reporta un "no" uniforme para *todos* los casos; **(b)** un **total que cuadra** — un elemento
@@ -441,8 +441,12 @@ Encadenadas por **gates** (los recuadros coral del diagrama); un gate rojo es un
 > `len(...)`; cuanto más cerca cae el número del esperado, **más** sospechoso; **(c)** un **gate que no podía
 > fallar** — si el corpus de referencia no tiene ningún ejemplo de la forma que tocaste, la pasada limpia
 > demuestra *no-regresión y nada más* (caso real: un detector que dispara en **0 de 190** documentos:
-> `fires=0` se lee igual si el código es correcto o si está roto del todo). Di siempre qué **puede** y qué
-> **no puede** demostrar cada gate.
+> `fires=0` se lee igual si el código es correcto o si está roto del todo); **(d)** un **canario que nunca
+> aplicó la perturbación real** — el instrumento puede estar impecable y aun así no probar nada porque lo
+> que le hace al dato no es lo que hace producción (caso real: test sintético al 100% vs rebuild real
+> menos del 1%); **(e)** un **gate estructural leído como semántico** — presente/único/enganchado ≠ correcto
+> (caso real: migración "limpia" con el **56%** de nombres heredados equivocados). Di siempre qué **puede**
+> y qué **no puede** demostrar cada gate.
 
 ### Un ejemplo real (ver [`metodologia/EJEMPLO_REAL.md`](./ejemplos/metodologia/EJEMPLO_REAL.md))
 Mismo caso sanitizado que en el curso Claude Code; el agente orquestador es **Cursor**. Bug: *"un campo
@@ -652,8 +656,13 @@ desde un ticket o un PR; moverse degenera en empaquetarlo todo; y cada persona a
   caso normal es que un compañero esté empujando a la vez y un espejo exacto desde una vista vieja
   **borra su trabajo**.
 - **Los docs son la fuente de verdad; el grafo es derivado.** Los ficheros por ticket casi nunca
-  chocan (cada uno trabaja en tickets distintos); el grafo generado es el **único** punto real de
-  contención → o se reconstruye en local, o lo publica **una sola** máquina.
+  chocan; el grafo generado es el **único** punto real de contención → lo publica **una sola** máquina.
+  ⚠️ "Reconstruir en local" solo vale si el árbol es *puramente* derivado.
+- **"Derivado" es del fichero, no de la carpeta.** Dentro del árbol generado vive un overlay **escrito
+  a mano** (nombres curados de comunidades) que no regenera nada — al reconstruir sobrevivió **menos del 1%**.
+  Clasifica por fichero: *fuente* / *derivado* / *escrito a mano dentro del derivado* (el tercero viaja
+  siempre). Los pares viajan juntos (huella del grafo en el overlay); pedir rebuild = un fichero por
+  petición en `refresh_queue/` (sin locks).
 - **Lo específico de agentes — la máquina tiene rol.** Este detalle solo aparece cuando el mismo
   registro es alcanzable desde varias máquinas con permisos distintos, y es el más fácil de olvidar:
   la sesión tiene que saber **dónde está y qué le está permitido** *antes* de actuar. Si no, una
@@ -765,8 +774,9 @@ tickets que comparten ese código.
 
 **Dónde se engancha:** en la **etapa 1 (Orientar)** de la metodología — la regla *history-first* de
 `.cursor/rules/00-methodology-core.mdc` dice **corre `kg <ticket|tema>` antes de hacer grep** en
-`data/changes/`. El grafo apunta a *qué leer*, no lo sustituye. Y es un **artefacto derivado**: nunca
-viaja entre máquinas; se reconstruye donde esté el corpus (sección 11). Confidencialidad: los nodos llevan
+`data/changes/`. El grafo apunta a *qué leer*, no lo sustituye. Es un **artefacto derivado** que se
+reconstruye donde esté el corpus (sección 11) — pero lo **escrito a mano dentro del árbol** (nombres
+curados) viaja siempre; "derivado" es del fichero, no de la carpeta. Confidencialidad: los nodos llevan
 nombres internos → el árbol completo vive bajo `data/` gitignored; compartirlo fuera exigiría una pasada de
 sanitización aparte.
 

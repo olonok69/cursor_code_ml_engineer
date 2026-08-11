@@ -140,7 +140,9 @@ with idempotent subcommands, not easy-to-forget manual steps:
 
 For the **laptop agent**, a single entry point —`LAPTOP_START_HERE.md`— orchestrates: restore
 the bundle → `bootstrap` → orientation (`AGENTS.md` / rules, skill `kg` history-first) → delta back.
-The graph is a **derived** artifact: it never travels back; it is rebuilt where the current corpus is.
+The graph is a **derived** artifact: it is rebuilt where the current corpus is. ⚠️ **But the curated
+names overlay does travel both ways** — it lives inside the generated tree and nothing regenerates it,
+so rebuilding without it leaves every community unnamed (see the rules table at the end).
 
 ## Landing is agent-driven — with guardrails
 
@@ -207,7 +209,10 @@ operating model. The model matters more than the technology:
 | **Narrow scope**: only `changes/**/*.md` + the graph | Confidentiality and size. Widening later is easy; retracting is not. |
 | **Write via sync, read via read-only mount** | Object storage has **no** locking or atomic rename. A writable mount invites corruption that shows up weeks later. |
 | **Dry-run by default**, explicit `--go`; `--delete` separate | The normal case is a teammate pushing at the same time; an exact mirror from a stale local view **deletes their work**. |
-| **Docs are the source of truth; the graph is derived** | Per-ticket files almost never collide. The generated graph is the **only** real contention point → either rebuild locally, or **one** machine publishes it. |
+| **Docs are the source of truth; the graph is derived** | Per-ticket files almost never collide. The generated graph is the **only** real contention point → **one** machine publishes it. ⚠️ "Rebuild locally" is only safe if the generated tree is *purely* derived — see the note below. |
+| **"Derived" is a property of the file, not of the folder** | Inside the generated tree lives a **hand-authored** file (the curated community names) that nothing regenerates: on a rebuild, **<1%** survived. Classify per file — *source* / *derived* / *authored inside derived* — and treat the third as source. |
+| **Pairs must move together** | The names overlay is only meaningful against the graph it came from, but sync compares **object by object** → new graph + old names = names glued to the wrong community, **with no error**. Stamp the overlay with a **fingerprint of the graph** and make the health check fail loudly. |
+| **Coordinate without locks** | To request a rebuild, each contributor writes **their own file** in a queue (`refresh_queue/<utc>-<machine>.request`). Distinct keys never collide; a shared queue file would be lost to last-writer-wins. It is also the same contract a scheduled job will consume. |
 | **Each machine declares its identity** | See below: this is what is specific to working with agents. |
 
 ### What is specific to agents: the machine has a role

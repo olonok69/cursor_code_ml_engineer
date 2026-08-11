@@ -1114,7 +1114,7 @@ def slide_30(prs):
         "Alcance estrecho: changes/**/*.md + grafo (nada de cliente)",
         "Escribe por sync; lee por mount de SOLO LECTURA",
         "Dry-run por defecto; --delete opt-in (no borrar al compañero)",
-        "Docs = fuente de verdad; grafo derivado (un publisher)",
+        "UN solo publisher. \"Derivado\" es del fichero, no de la carpeta",
     ], GREEN, 1.65)
     card(slide, 0.7, 4.7, 11.95, 1.5,
          "Lo específico de agentes: IDENTITY.md machine-local", [
@@ -1247,7 +1247,7 @@ def slide_35(prs):
     ], ls=1.1)
     card(slide, 0.7, 5.2, 11.95, 1.0, "Honestidad y ciclo de vida", [
         "Recall en zonas densas · EXTRACTED = fiable, INFERRED = pista · interno "
-        "(data/) · derivado: nunca viaja, se reconstruye",
+        "(data/) · derivado se reconstruye, pero lo escrito a mano viaja",
     ], BLUE, 0.1)
     quote(slide, "Un paso semántico en el build, cero LLM en la consulta. El grafo es "
                  "el mapa; el agente, el guía.")

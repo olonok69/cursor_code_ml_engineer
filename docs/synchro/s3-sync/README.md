@@ -49,13 +49,47 @@ them.** Everyone reads the graph; exactly **one machine publishes it**.
 
 Per-task folders almost never collide — people work on different tasks. The single
 genuine contention point in the whole system is the generated graph, because two
-people rebuilding and pushing it will silently clobber each other. Two acceptable
-resolutions, in order of preference:
+people rebuilding and pushing it will silently clobber each other.
 
-1. **Rebuild locally from the synced records** (`/kg-refresh`) and don't share the
-   built graph at all. The records are already shared; the graph is cheap to derive.
-2. **Designate one publisher machine** that owns `knowledge-graph/` as its single
-   writer. Everyone else pulls it and never pushes it.
+> ### ⚠️ "Derived" is a property of a file, not of a folder
+>
+> An earlier version of this page offered *"rebuild locally and don't share the
+> built graph at all — the graph is cheap to derive"* as the **preferred** option.
+> **That is wrong, and it was corrected the hard way.**
+>
+> It holds only while the rebuild is **lossless**. In practice the generated tree
+> also contains a **hand-authored** file — the curated community names — that
+> nothing regenerates. A rebuild re-derives the graph's internal identifiers from
+> scratch, so the names no longer attach to anything: measured on a real rebuild,
+> **under 1% of them survived**, and even after fixing the underlying cause only
+> ~38% carried across. Recreating them is an hour of judgement, not a command.
+>
+> Nor is the graph "cheap to derive": a full rebuild is a fan-out of extraction
+> agents over the whole corpus.
+>
+> So classify **per file**, in three categories:
+>
+> | Category | Example | Must it travel? |
+> |---|---|---|
+> | Source | the written records | ✅ yes |
+> | Derived | the built graph, indexes, caches | optional — saves a rebuild |
+> | **Authored, living inside the derived tree** | the curated names overlay | ✅ **yes, always** |
+>
+> The third category is the trap: every rule you wrote about the folder says it is
+> safe to discard.
+
+**The resolution is therefore a single publisher** that owns `knowledge-graph/` as
+its single writer. Everyone else pulls it and never pushes it. "Rebuild locally
+instead" is only safe for a tree that is *purely* derived — check before assuming
+yours is.
+
+**Pairs must move together.** The names overlay is only meaningful against the exact
+graph it was built from, but `aws s3 sync` compares each object independently, so a
+machine can pull a new graph and keep an old overlay. That produces no error — just
+names attached to the wrong clusters. Stamp the overlay with a **fingerprint of the
+graph it was built against** and make the health check exit non-zero when they
+disagree. A per-file sync cannot express atomicity; the consistency check has to
+live in the data.
 
 Enable **versioning on the bucket** either way. It is the recovery net for the day
 someone gets this wrong.
@@ -72,6 +106,29 @@ someone gets this wrong.
 The publisher role is pinned to one machine until it is deliberately transferred.
 Transferring it is a documented procedure, not an ad-hoc decision — the point of one
 publisher is lost the moment two machines believe they hold the role.
+
+**How a contributor asks for a rebuild — without any locking.** A contributor who
+changes records does not rebuild; they flag it, and the publisher rebuilds. The flag
+is deliberately **one file per request**:
+
+```bash
+kg_refresh.sh request "added the sst-6043 record"   # -> refresh_queue/<utc>-<machine>.request
+./data-push.sh --go
+```
+
+A single shared queue file would hit the same last-writer-wins problem as everything
+else here and silently drop requests. **Distinct keys never collide**, so a queue of
+one-file-per-request needs no coordination whatsoever. The publisher runs
+`kg_refresh.sh queue` before rebuilding and `queue --clear` after the health check
+passes.
+
+> **Treat the single publisher as scaffolding, not architecture.** Pinning the rebuild
+> to one person's machine stalls the moment that machine is off, travelling, or
+> mid-task. The queue above is deliberately the *trigger contract*, so the rebuild can
+> later move to a scheduled or event-driven job with **no change to anything
+> contributors do** — the migration swaps the operator, not the interface. What still
+> blocks a fully unattended run is the judgement step: naming the clusters the rebuild
+> could not carry across.
 
 ---
 
@@ -101,8 +158,8 @@ Then:
 
 `IDENTITY.md` records the declared role **and runs live checks** — which account are
 we authenticated as, is the bucket reachable, is the mount present. The repository
-orientation doc (`AGENTS.md` in Cursor, `CLAUDE.md` in Claude Code) points at it, so
-every session reads its own role first.
+orientation doc (`AGENTS.md` in Cursor, `CLAUDE.md` in Claude Code) points at it, so every
+session reads its own role first.
 
 **`IDENTITY.md` is machine-local.** It is gitignored, never synced, and never
 packaged. It is the one file that must *not* be identical everywhere. Re-run

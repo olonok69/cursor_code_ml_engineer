@@ -1114,7 +1114,7 @@ def slide_30(prs):
         "Narrow scope: changes/**/*.md + graph (no client data)",
         "Write via sync; read via READ-ONLY mount",
         "Dry-run by default; --delete opt-in (don't delete a teammate's work)",
-        "Docs = source of truth; graph derived (one publisher)",
+        "ONE publisher. Derived is per file, not per folder",
     ], GREEN, 1.65)
     card(slide, 0.7, 4.7, 11.95, 1.5,
          "Agent-specific: machine-local IDENTITY.md", [
@@ -1247,7 +1247,7 @@ def slide_35(prs):
     ], ls=1.1)
     card(slide, 0.7, 5.2, 11.95, 1.0, "Honesty and lifecycle", [
         "Recall in dense zones · EXTRACTED = reliable, INFERRED = hint · internal "
-        "(data/) · derived: never travels, rebuild it",
+        "(data/) · derived rebuilds, but hand-authored travels",
     ], BLUE, 0.1)
     quote(slide, "One semantic step at build time, zero LLM at query time. The graph is "
                  "the map; the agent, the guide.")
