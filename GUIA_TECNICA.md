@@ -479,7 +479,7 @@ Diagrama: [`metodologia/flow.png`](./ejemplos/metodologia/flow.png) (fuente `flo
 > Los tests en verde no son prueba de lo que se despliega. Idéntico en rol al gate de Claude Code — cambia
 > solo qué agente lo ejecuta.
 >
-> **Tres formas de que un gate verde no pruebe nada** — las tres nos han mordido:
+> **Cinco formas de que un gate verde no pruebe nada** — las cinco nos han mordido:
 > **Instrumento roto.** Saltarse el constructor para probar un predicado barato deja sin asignar todo atributo
 > que no pensaste en poner; si el método lo lee y tiene su propio `try/except`, el error se traga y vuelve como
 > un `False` plausible. El sondeo entonces reporta un "no" uniforme y confiado para **todos** los casos. Canario
@@ -492,6 +492,20 @@ Diagrama: [`metodologia/flow.png`](./ejemplos/metodologia/flow.png) (fuente `flo
 > acabas de tocar, la pasada limpia demuestra **no-regresión y nada más**. Dilo explícitamente y nombra qué
 > sostiene entonces la evidencia de corrección. (Caso real: un detector que dispara en **0 de 190** documentos
 > del corpus — `fires=0` se lee idéntico si el código es correcto o si está completamente roto.)
+> **Canario que nunca aplicó la perturbación real.** El instrumento puede estar impecable y aun así no probar
+> nada, porque lo que le hace al dato **no es lo que hace producción**. Caso real: el test sintético renombró
+> los *contenedores* y movió un 4% de los elementos, recuperó el **100%** del mapeo y se dio por "verificado";
+> la reconstrucción real cambió algo que el test nunca tocó —los **identificadores de los propios elementos**,
+> el 88% de ellos— y la recuperación cayó por debajo del **1%**. Antes de fiarte de un canario en verde, di en
+> una frase *qué le hace producción a este dato* y comprueba que el canario hace lo mismo. Si no puedes, el
+> gate está **sin probar**: "pasó el test que supe construir" no es "el riesgo está retirado".
+> **Gate estructural leído como semántico.** Comprobar que todo está presente, es único y engancha bien no dice
+> **nada** sobre si es *correcto*. Caso real: una migración dio parte limpio —todos los grupos casados, ninguno
+> perdido, cero huérfanos— mientras el **56%** de los nombres heredados no describía aquello a lo que estaban
+> pegados, porque el emparejamiento cayó a un proxy superficial. Un nombre equivocado es **peor** que uno
+> ausente: el ausente pregunta, el equivocado responde mal y manda al siguiente al sitio incorrecto. Cuando la
+> corrección de un valor es cuestión de **significado**, ningún check automático la retira: programa la lectura
+> humana y dilo en la descripción del gate.
 >
 > **El contrato de salida es un documento vivo.** Cuando un cambio altera lo que se emite, consulta la regla que
 > lo gobierna **antes** de diseñar el fix y haz exactamente una de tres cosas: **cumplirla**, **revisarla** como
@@ -684,7 +698,8 @@ re-bootstrap `.cursor/`: MCP `--path`, skills, si esa máquina no lo tenía); y 
 `data/` (para que viaje) y `restore-memory` la fusiona de vuelta con backup en la principal, antes de
 `kg-refresh` — no asumas que las Memories del editor se sincronizan solas. Punto de entrada único para el
 agente del portátil: `LAPTOP_START_HERE.md` (restaurar → `bootstrap` → seguir igual → mandar delta). El
-grafo es un artefacto **derivado**: nunca viaja de vuelta; se reconstruye donde esté el corpus.
+grafo es un artefacto **derivado**: se reconstruye donde esté el corpus. ⚠️ **Pero el overlay de nombres
+curados sí viaja en ambos sentidos** — vive dentro del árbol generado y no lo regenera nada.
 
 Guardrails (el landing lo conduce **un agente**, con un `INSTRUCTIONS.md` escrito *para* él): solo
 no-destructivo (renombrar, no borrar; nunca dos ops de movimiento a la vez en un mount Windows); sin
@@ -714,7 +729,10 @@ ticket/PR; moverse degenera en empaquetarlo todo; y cada compañero acaba con **
 | Alcance estrecho: solo `changes/**/*.md` + grafo | Confidencialidad y tamaño. **Nada** de documentos de cliente, fixtures ni binarios sin firma del dueño del bucket. |
 | **Escribe por sync, lee por mount de solo lectura** | El almacenamiento de objetos no tiene locking ni rename atómico: un mount escribible corrompe y se descubre semanas después. |
 | Dry-run por defecto; `--delete` es opt-in aparte | Un espejo exacto desde una vista local vieja **borra** lo que un compañero acaba de empujar. |
-| Docs = fuente de verdad; el grafo es **derivado** | Los ficheros por ticket casi nunca chocan; el grafo generado es el único punto real de contención → reconstruir en local (skill `kg-refresh`) o **un solo publisher**. |
+| Docs = fuente de verdad; el grafo es **derivado** | Los ficheros por ticket casi nunca chocan; el grafo generado es el único punto real de contención → lo publica **una** máquina. ⚠️ "Reconstruir en local" solo vale si el árbol es *puramente* derivado. |
+| **"Derivado" es del fichero, no de la carpeta** | Dentro del árbol generado vive un fichero **escrito a mano** (nombres curados) que no regenera nada: al reconstruir sobrevivió **menos del 1%**. Clasifica por fichero — *fuente* / *derivado* / *escrito a mano dentro del derivado* — y trata el tercero como fuente. |
+| **Los pares viajan juntos** | El overlay solo vale contra el grafo del que salió, pero el sync compara **objeto a objeto** → grafo nuevo + nombres viejos = nombres en la comunidad equivocada, **sin error**. Sella el overlay con una **huella del grafo**. |
+| **Coordinar sin locks** | Pedir rebuild: cada contribuidor escribe **su propio fichero** en `refresh_queue/<utc>-<máquina>.request` (`kg_refresh.sh request`). Claves distintas nunca colisionan. |
 | Versionado del bucket activado | Red de recuperación, antes del primer accidente y no después. |
 
 **Lo específico de agentes — la máquina tiene rol.** En cuanto el mismo registro es
@@ -811,8 +829,23 @@ corre `kg explain <ticket|tema>` *antes* de hacer grep en `data/changes/`; una l
 relacionados + la zona de peligro a leer (apunta a *qué leer*, no lo sustituye). Honestidad: la ganancia
 real es **recall en zonas densas**; `EXTRACTED` = fiable, `INFERRED` = pista a verificar. En la instalación
 real todo vive bajo `data/` gitignored (los nodos llevan nombres internos → interno; compartir fuera =
-pasada de sanitización aparte). Es un artefacto **derivado**: nunca viaja entre máquinas; se reconstruye
-donde esté el corpus (§15, con `bootstrap` / `snapshot-memory` / `restore-memory` cerrando el círculo).
+pasada de sanitización aparte). Es un artefacto **derivado**: se reconstruye donde esté el corpus (§15, con
+`bootstrap` / `snapshot-memory` / `restore-memory` cerrando el círculo).
+
+> ⚠️ **Corrección: "derivado" es una propiedad del fichero, no de la carpeta.** Esta guía decía que el
+> grafo "nunca viaja entre máquinas" porque se reconstruye. Eso vale **solo mientras reconstruir sea sin
+> pérdida**, y dejó de serlo: dentro del árbol generado vive un fichero **escrito a mano** — los nombres
+> curados de cada comunidad — que no lo regenera nada. Al reconstruir, los identificadores internos del
+> grafo se derivan de cero, así que los nombres dejan de enganchar: medido en una reconstrucción real,
+> **sobrevivió menos del 1%**, y aun corrigiendo la causa de fondo solo ~38%. Rehacerlos es una hora de
+> criterio, no un comando. Clasifica **por fichero**: *fuente*, *derivado*, y **"escrito a mano pero
+> dentro del árbol derivado"** — el tercero se trata como fuente: viaja siempre.
+>
+> Y como el overlay de nombres solo tiene sentido contra el grafo exacto del que salió, mientras que
+> `aws s3 sync` compara **cada objeto por separado**, una máquina puede acabar con grafo nuevo y nombres
+> viejos. Eso no da error: da **nombres pegados a la comunidad equivocada**. Se sella el overlay con una
+> **huella del grafo** contra el que se construyó y el chequeo de salud falla en ruidoso si no coinciden.
+> Un sync fichero-a-fichero no sabe expresar atomicidad; la comprobación tiene que vivir en el dato.
 
 > **Coste — honesto, y por qué compensa.** "Sin LLM en la consulta" **no** es "gratis": el razonamiento caro
 > se paga **una vez** al construir el grafo (`kg-refresh`, con subagentes); cada consulta `kg` es luego un

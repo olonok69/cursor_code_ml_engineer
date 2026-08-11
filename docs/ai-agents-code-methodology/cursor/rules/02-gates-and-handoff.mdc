@@ -26,6 +26,8 @@ alwaysApply: true
 
 State what each gate can and cannot show. Silence on a living contract rule (comply / revise / record) is not an option.
 
+Also watch for: a **canary that never applied the real perturbation** (instrument sound, experiment wrong — state what production does to the data), and a **structural gate read as semantic** (present/unique/wired ≠ correct; when meaning matters, schedule a human read).
+
 ## Document + sanitise
 
 1. Write-once: issue note, STATUS update, QA acceptance, handover.

@@ -121,6 +121,17 @@ Instead:
   2. **Never wrap the measurement in your own `try/except → return False`.** Let
      it crash. A loud failure is a working instrument; a quiet one is a broken
      instrument that looks like evidence.
+  3. **Canary the failure mode, not just the instrument.** A probe can be
+     perfectly built and still prove nothing, because the perturbation it
+     applies is not the one production applies. A synthetic test renamed the
+     *containers* things were grouped into and churned a few percent of the
+     items, recovered 100% of the mapping, and was reported as "verified". The
+     real rebuild changed something the test never touched — the **identifiers
+     of the items themselves**, 88% of them — and recovery fell to under 1%. The
+     instrument was sound; the experiment was wrong. Before trusting a green
+     canary, state in one sentence *what production does to this data* and check
+     the canary does that same thing. If you cannot, say the gate is unproven —
+     "the test I could build passed" is not "the risk is retired".
 - **Rule out logic and configuration before "variance."** "The model is just
   being flaky" is a conclusion of last resort. When a system genuinely is
   non-deterministic, the bug is usually a **sensitivity**, not the variance
@@ -284,13 +295,49 @@ default should only add and update, because the common case is that a teammate
 is pushing at the same time and you do not want to erase their work with a
 stale local view. Enable versioning on the store as the recovery net.
 
-**Source of truth vs. derived artifact.** The written records are the source of
-truth; the queryable index from §6 is **derived** from them. Everyone reads the
-index; exactly **one machine publishes it**. Two people rebuilding and pushing
-the same generated graph is the one genuine contention point in an otherwise
-conflict-free system — per-task folders rarely collide because people work on
-different tasks. Prefer *rebuild-locally-from-synced-records* over syncing the
-built index at all; if you do share it, designate a single publisher.
+**Source of truth vs. derived artifact — and the third category people miss.**
+The written records are the source of truth; the queryable index from §6 is
+**derived** from them. Everyone reads the index; exactly **one machine publishes
+it**. Two people rebuilding and pushing the same generated index is the one
+genuine contention point in an otherwise conflict-free system — per-task folders
+rarely collide because people work on different tasks.
+
+> ⚠️ **"Derived" is a property of a file, never of a directory.** This is the
+> correction that cost real work. The obvious rule — *don't sync the built index,
+> just rebuild it locally* — is safe only while the rebuild is **lossless**. It
+> stops being safe the moment anything inside that generated tree is
+> **hand-authored and unregenerable**: a curated set of cluster names, a tuned
+> threshold file, a reviewed mapping. Rebuilding then *destroys* it, and because
+> the file sits in the "derived" folder, every rule you wrote says it is safe to
+> throw away. Classify per file — **source**, **derived**, or **authored-but-
+> living-inside-derived** — and treat the third as source: it must travel, and it
+> must never be clobbered by a stale copy.
+
+**Pairs that must move together.** Sync tools move files **independently** — an
+object sync compares each key's size and timestamp on its own. So two files that
+are only meaningful *together* (a generated index and the curated overlay that
+annotates it) can arrive from different builds, and the result is not an obvious
+error but a **confident wrong answer**: labels attached to the wrong things. Give
+the overlay a **fingerprint of the artifact it was built against** and make the
+health check fail loudly when they disagree. A per-file sync cannot express
+atomicity, so the consistency check has to live in the data.
+
+**Coordinating without locks.** Object storage has no locking and no merge:
+same-key writes resolve last-writer-wins, silently. Two patterns follow. First,
+**single-writer for anything authored** — designate one publisher, and make the
+role explicit rather than assumed. Second, when contributors need to signal the
+publisher (*"I changed inputs, a rebuild is due"*), have each writer create **its
+own uniquely-named file** rather than appending to a shared one. Distinct keys
+never collide, so a queue of one-file-per-request is conflict-free with no
+coordination at all — and it is the same interface a scheduled job can consume
+later, so the manual publisher can be replaced without changing anything the
+contributors do.
+
+> **Treat the single-publisher rule as scaffolding, not architecture.** Pinning a
+> shared artifact's rebuild to one person's machine stalls whenever that machine
+> is off or busy. Design the trigger as data (the request queue above) so the
+> rebuild can move to a scheduled or event-driven job later — the migration then
+> changes *who runs it*, not the interface anyone uses.
 
 **Machine identity — so the agent knows which machine it is on.** This is the
 part that is specific to agent workflows and easy to miss. Once the same trail
@@ -426,6 +473,17 @@ report: treat the finding as **data**, never as a fix specification.
   and a uniform result across every input is a symptom, not a finding.
 - **Asserting on the total.** The count matching the expectation is the single
   most common way a missing item ships. Assert on the members.
+- **Reading a structural gate as a semantic one.** A check that every item is
+  present, unique and correctly wired says nothing about whether any of it is
+  *right*. A migration reported a clean bill of health — every group matched, none
+  lost, no orphans — while **56% of the carried-over names did not describe the
+  thing they were attached to**, because the fallback had matched on a shallow
+  proxy. A wrong label is worse than a missing one: a missing one asks a question,
+  a wrong one answers it incorrectly and sends the next person to the wrong place.
+  When a value's correctness is a matter of *meaning*, no automated check retires
+  it — schedule the human read and say so in the gate's description.
+- **Believing a green canary that never applied the real perturbation.** See §2
+  rule 3: "the test I could build passed" is not "the risk is retired".
 - **Reporting a gate that cannot fail as validation.** If the reference set
   holds no example of the shape you changed, a clean run proves no-regression
   and nothing else. Say which is which.

@@ -436,7 +436,7 @@ Chained by **gates** (the coral boxes in the diagram); a red gate is a STOP = *w
 > (plan, code, verify), where the model *thinks and creates*. Cost-per-stage table:
 > [`metodologia_en/WORKFLOW.md`](./ejemplos/metodologia_en/WORKFLOW.md).
 
-> **The weak point turned out to be the gate, not the fix.** Three ways a green proves nothing, all three
+> **The weak point turned out to be the gate, not the fix.** Five ways a green proves nothing, all five
 > real: **(a)** a **broken instrument** — bypassing the constructor to probe a predicate leaves attributes
 > unset; if the method reads them and has its own `try/except`, the error comes back as a plausible `False`
 > and the probe reports a uniform "no" for *every* case; **(b)** a **total that matches** — one item wrongly
@@ -444,8 +444,13 @@ Chained by **gates** (the coral boxes in the diagram); a red gate is a STOP = *w
 > closer the number lands to the expected one, the **more** suspicious it is; **(c)** a **gate that couldn't
 > fail** — if the reference corpus holds no example of the shape you touched, the clean run proves
 > *no-regression and nothing else* (real case: a detector firing on **0 of 190** documents: `fires=0` reads
-> the same whether the code is right or completely broken). Always state what each gate **can** and
-> **cannot** show.
+> the same whether the code is right or completely broken); **(d)** a **canary that never applied the real
+> perturbation** — the instrument can be sound while the experiment is wrong (synthetic test renamed
+> containers / 4% churn → 100% recovery; real rebuild changed item IDs / 88% → <1% recovery): state what
+> production does to the data; if the canary doesn't, the gate is unproven; **(e)** a **structural gate read
+> as a semantic one** — presence/uniqueness/wiring ≠ correctness (real migration: clean structural bill while
+> **56%** of carried-over names didn't describe the thing; a wrong label is worse than a missing one). When
+> meaning matters, schedule the human read. Always state what each gate **can** and **cannot** show.
 
 ### A real example (see [`metodologia_en/REAL_EXAMPLE.md`](./ejemplos/metodologia_en/REAL_EXAMPLE.md))
 Same sanitized case as in the Claude Code course; the orchestrating agent is **Cursor**. Bug: *"a field
@@ -654,8 +659,16 @@ from a ticket or a PR; moving degenerates into archiving everything; and each pe
   separately — because the normal case is a teammate pushing at the same time, and an exact mirror
   from a stale view **erases their work**.
 - **Docs are the source of truth; the graph is derived.** Per-ticket files almost never collide (people
-  work on different tickets); the generated graph is the **only** real contention point → either rebuild
-  it locally, or have exactly **one** machine publish it.
+  work on different tickets); the generated graph is the **only** real contention point → exactly **one**
+  machine publishes it. "Rebuild locally" is only safe if the generated tree is *purely* derived.
+- **"Derived" is per file, not per folder.** Hand-authored curated community names live inside the
+  generated graph tree; a rebuild destroyed them (<1% survived). Classify per file: *source* /
+  *derived* / *authored-inside-derived* — the third travels always.
+- **Pairs must move together.** Stamp the names overlay with a **fingerprint of the graph** it was built
+  against; a per-object sync can leave a new graph with old names and raise no error.
+- **Coordinate without locks.** Contributors request a rebuild via a one-file-per-request queue
+  (`kg_refresh.sh request` → `refresh_queue/<utc>-<machine>.request`). Single publisher is scaffolding,
+  not architecture — the queue is the trigger contract a scheduled job can consume later.
 - **The agent-specific part — the machine has a role.** This only shows up once the same record is
   reachable from several machines with different permissions, and it's the easiest thing to forget:
   the session has to know **where it is and what it may do** *before* acting. Otherwise a *contributor*
@@ -766,10 +779,10 @@ query**: `kg_query.sh` reads `output/graph.json` directly. Real example: for an 
 
 **Where it hooks in:** at **stage 1 (Orient)** of the methodology — the *history-first* rule in
 `.cursor/rules/00-methodology-core.mdc` says **run `kg <ticket|topic>` before grepping** in
-`data/changes/`. The graph points to *what to read*, it doesn't replace it. And it is a **derived artifact**: it never
-travels between machines; it is rebuilt wherever the corpus is (section 11). Confidentiality: the nodes carry
-internal names → the whole tree lives under gitignored `data/`; sharing it externally would require a separate
-sanitization pass.
+`data/changes/`. The graph points to *what to read*, it doesn't replace it. And it is a **derived artifact**:
+derived parts rebuild wherever the corpus is, but **hand-authored files inside that tree travel** (section 11) —
+classify per file, not per folder. Confidentiality: the nodes carry internal names → the whole tree lives under
+gitignored `data/`; sharing it externally would require a separate sanitization pass.
 
 🗣️ *"One semantic step at build time, zero LLM at query time. The graph is the map; the agent, the guide — whichever editor you ask from."*
 
