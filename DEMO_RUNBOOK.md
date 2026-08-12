@@ -1,7 +1,5 @@
 # DEMO_RUNBOOK — presentación Cursor (36 slides)
 
-> English version: [`DEMO_RUNBOOK_EN.md`](./DEMO_RUNBOOK_EN.md).
-
 Runbook para el/la **ponente**. Comandos verificados en Windows (PowerShell) el 9 ago 2026.
 Guía narrativa: `[GUIA_PRESENTACION.md](./GUIA_PRESENTACION.md)` · Deck: `[presentacion/Cursor_Presentacion.pptx](./presentacion/Cursor_Presentacion.pptx)`.
 
@@ -71,7 +69,7 @@ El “staging” es un servidor local (escribe `.staging-url`); no hay cloud.
 Teaching copies: `ejemplos/skills-plugins/.cursor/skills/{audit,audit-python,deploy-staging}/`.
 Live copies: `.cursor/skills/{audit,audit-python,deploy-staging}/`.
 
-**Mejor en DPL** (`document-parser-lambda`): CodeGraph, Serena, skills `kg` / `methodology-plan` — este repo de curso no es un app con índice de producto.
+**Mejor en DPL** (`document-parser-lambda`): los **5** MCP/skills del día a día (CodeGraph, Serena, Playwright, Context7, `kg`) — prompts listos en Parte 2 abajo. Este repo de curso no indexa producto.
 
 ---
 
@@ -165,14 +163,41 @@ docker ps      # Engine up
 | ----- | --------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------- |
 | 20    | Divider Parte 2             | Solo deck                                                                                                                  | —                 |
 | 21–23 | Flujo 11 etapas + ejemplo   | Abrir `ejemplos/metodologia/flow.png` · `WORKFLOW.md` · 2 min de `EJEMPLO_REAL.md`                                         | metodologia       |
-| 24–25 | CodeGraph / Serena          | En DPL chat: *“usa CodeGraph para localizar X”* · o T2: `codegraph explore "<símbolo>"` · Serena vía MCP `find_symbol`     | codegraph, serena |
-| 26    | GSD                         | **Solo slide** — “no hay port en Cursor; Plan mode + skills”                                                               | gsd               |
-| 27–28 | Playwright / prevalencia    | MCP Playwright smoke (navigate + snapshot) · abrir `ejemplos/metodologia/herramientas.md` · runbook `AGENT_SETUP_TOOLS.md` | metodologia, docs |
+| 24–25 | CodeGraph / Serena          | Live: ejemplos **1–2** abajo · o T2: `codegraph explore "ExtractorBase"`                                                   | codegraph, serena |
+| 26    | GSD                         | **Solo slide** — “no hay port en Cursor; Plan mode + skill `methodology-plan`”                                             | gsd               |
+| 27–28 | Playwright / prevalencia    | Live: ejemplos **3–5** abajo · abrir `ejemplos/metodologia/herramientas.md`                                                | metodologia, docs |
 | 29    | Transferencia Claude→Cursor | Abrir `docs/ai-agents-code-methodology/CURSOR_ADAPTATION.md` · carpeta `cursor/` (rules/skills/hooks)                      | pack              |
-| 30    | Sync máquinas + S3          | Abrir `ejemplos/metodologia/machine-sync.md` (§ evolución) · `docs/synchro/s3-sync/README.md` (1 pantalla)               | synchro           |
+| 30    | Sync máquinas               | Abrir `ejemplos/metodologia/machine-sync.md` · `docs/synchro/` (1 pantalla)                                                | synchro           |
 
 
-**Si MCP no está verde:** seguir `docs/ai-agents-code-methodology/AGENT_SETUP_TOOLS.md` (Reload Window, pin CodeGraph path, reiniciar Cursor tras `npm i -g codegraph`).
+**Si MCP no está verde:** seguir `document-parser-lambda/AGENT_SETUP_TOOLS.md` (o la copia en `docs/ai-agents-code-methodology/`) — Reload Window, pin CodeGraph path, reiniciar Cursor tras `npm i -g codegraph`.
+
+### 5 ejemplos live en DPL (skills + MCP del lambda)
+
+MCP en DPL (`.cursor/mcp.json`): **codegraph**, **serena**, **playwright**, **context7**.  
+Skills de proyecto: **`kg`**, `kg-refresh`, `methodology-plan`, `sanitise-diff`.  
+Runbook canónico con smoke + pass criteria: `D:\repos3\ILS_2\document-parser-lambda\AGENT_SETUP_TOOLS.md` §D.
+
+En Agent chat (workspace = `document-parser-lambda`), pegar **uno** por herramienta:
+
+| # | Tool | Prompt (copiar) | Pass si… |
+|---|---|---|---|
+| 1 | **CodeGraph** (MCP) | `Use the CodeGraph MCP tool codegraph_explore on ExtractorBase. Return: defining file, blast radius (callers), and whether tests cover it. Do not re-Read files already shown in the explore output.` | explore con callers bajo `src/services/extractor_wrappers/` (o equiv.) |
+| 2 | **Serena** (MCP) | `Using Serena MCP, call find_referencing_symbols for ExtractorBase._format_provision_description (disambiguate by class). List file:line references. Do not rename anything.` | refs con clase (no grep plano) |
+| 3 | **Playwright** (MCP) | `Using Playwright MCP, open https://example.com and report the page title. Then close the browser.` | título real (p.ej. Example Domain) |
+| 4 | **Context7** (MCP) | `Using Context7 MCP, fetch current docs guidance for pytest fixtures. Give a 5-line summary with source attribution from Context7.` | cita Context7 / docs, no solo memoria del modelo |
+| 5 | **kg** (skill) | `Run the kg skill for topic "letter-end". List related tickets / danger zones and what to read next. Do not start coding.` | tickets SST relacionados (o STATUS fallback explícito) |
+
+**CLI de apoyo (T2)** — si quieres evidencia sin Agent:
+
+```powershell
+cd D:\repos3\ILS_2\document-parser-lambda
+codegraph status
+codegraph explore "ExtractorBase"
+bash data/knowledge-graph/kg_query.sh "letter-end"
+```
+
+**Bonus (si sobra tiempo):** Plan mode + `/methodology-plan` (rellena plantilla; no implementa). No hace falta demo de `kg-refresh` live (lento).
 
 ---
 
@@ -210,14 +235,14 @@ start docs\knowledge-graph\output\graph.html
 | Bloque     | Slides | Tiempo    | Demos imprescindibles                               |
 | ---------- | ------ | --------- | --------------------------------------------------- |
 | Parte 1    | 1–19   | 40–50 min | `agent -p`, cache_demo, hooks deny, skill file, SDK |
-| Parte 2    | 20–30  | 30–40 min | flow.png + 1 MCP tool en DPL + transferencia pack   |
+| Parte 2    | 20–30  | 30–40 min | flow.png + **2–3** de los 5 smokes DPL + pack       |
 | Parte 3    | 31–36  | 15–20 min | `kg_query` + graph.html                             |
 | Buffer Q&A | —      | 10 min    | —                                                   |
 
 
 **Si vas corto:** corta Cloud Agents UI, sync máquinas a 1 frase, GSD a 30 s, skip SDK (deja `agent -p`).
 
-**Si sobra tiempo:** en DPL corre skill `/kg` o Plan mode con `methodology-plan`.
+**Si sobra tiempo:** en DPL corre los 5 smokes de la tabla Parte 2; Plan mode + `/methodology-plan`.
 
 ---
 
