@@ -663,6 +663,14 @@ desde un ticket o un PR; moverse degenera en empaquetarlo todo; y cada persona a
   Clasifica por fichero: *fuente* / *derivado* / *escrito a mano dentro del derivado* (el tercero viaja
   siempre). Los pares viajan juntos (huella del grafo en el overlay); pedir rebuild = un fichero por
   petición en `refresh_queue/` (sin locks).
+- ⚠️⚠️ **La recuperación caduca.** El versionado casi siempre **expira las versiones no actuales a los
+  30 días**. Recuperable **30 días y solo si alguien se da cuenta**. Onboarding literal: *baja antes
+  de editar, sube lo que cambiaste, y si desaparece algo tuyo, dilo dentro del mes o se ha ido.*
+- **Ledgers compartidos = solo-append.** Last-writer-wins sin merge: reescribir uno borra en silencio
+  la línea de otra persona. Añade filas; no reestructures las ajenas. Un aviso en el `pull` da la
+  **visibilidad** que el versionado no da.
+- **En divergencia manda el almacén compartido.** *"Yo lo tengo en local"* deja de ser argumento
+  cuando la versión de otro es la publicada. Acuérdalo **antes**.
 - **Lo específico de agentes — la máquina tiene rol.** Este detalle solo aparece cuando el mismo
   registro es alcanzable desde varias máquinas con permisos distintos, y es el más fácil de olvidar:
   la sesión tiene que saber **dónde está y qué le está permitido** *antes* de actuar. Si no, una

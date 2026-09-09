@@ -15,8 +15,10 @@ These are stack-independent and should remain strict:
 3. Solve the general class of issue, not one sample input.
 4. Keep a durable decision trail (why, what changed, how verified).
 5. Human owns irreversible external actions (merge, deploy, stakeholder comms).
+6. **Canary the instrument before believing it** — a filter/lock/scan that returns "nothing" or "ok" without a known-answer check is not evidence (success and total failure look identical when silence is the correct behaviour; a negative result must not share an output with a failed measurement).
+7. **Read the machine/session role before writing shared state** — once the trail is shared, a contributor session that republishes the derived index is the one failure mode the single-publisher rule exists to prevent. Point always-on agent instructions at a machine-local `IDENTITY.md`.
 
-If you keep only five rules, keep these.
+If you keep only five rules, keep **1–5**. Add **6–7** as soon as you share a durable trail across machines or people.
 
 ---
 

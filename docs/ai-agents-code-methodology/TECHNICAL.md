@@ -24,6 +24,19 @@
 > legitimate outcomes (§1); and a new §7 on **sharing the durable trail across
 > machines and people** via object storage, including the machine-identity
 > problem that only appears once an agent can run in more than one role.
+>
+> **This revision** turns to the gates' remaining blind spots and to the *time*
+> dimension of the record. A gate can be sound, run clean, and still fail to
+> distinguish the fix you shipped from a weaker one (§4); an in-artifact check
+> proves nothing until it has been shown to fail on unfixed source (§4). A
+> stated fact about the environment is a hypothesis, not evidence, and the
+> exception handlers between you and a symptom are the first thing to suspect
+> while diagnosing (§2). §6 gains the two dimensions it was missing — **time**,
+> how in-flight state survives a session boundary, and **density**, the index
+> tunable no structural gate can see. §7 gains **least privilege**: the obvious
+> grant on a shared record widens access instead of narrowing it. It also adds
+> the sharpest lesson of the set (§4): a test suite is downstream of your
+> specification and cannot tell you the specification is wrong.
 
 ---
 
@@ -112,7 +125,7 @@ Instead:
   resulting attribute error is swallowed and returned as a plausible negative.
   The probe then reports a confident, uniform "no" for every input — and a
   survey built on it reported the right headline for entirely the wrong reason,
-  with all several-hundred inputs reading as negative. Two rules make the
+  with all several-hundred inputs reading as negative. Three rules make the
   shortcut safe:
   1. **Always canary against a known-answer case.** Before you trust a probe on
      unknown inputs, run it on one input whose answer you already know, and
@@ -132,6 +145,27 @@ Instead:
      canary, state in one sentence *what production does to this data* and check
      the canary does that same thing. If you cannot, say the gate is unproven —
      "the test I could build passed" is not "the risk is retired".
+- **A rule that matches nothing looks exactly like a rule that works.** Filters,
+  excludes, guards, allow-lists: when the correct behaviour is *silence*, success
+  and total failure produce identical output. Four such defects were found in a
+  single afternoon on one file — an exclude anchored at the wrong end of the path,
+  another naming a directory that no longer existed under that name, a third that
+  had never been reached — and every one of them had passed review, because the
+  pattern *read* correctly. None was found by inspection. All four were found by
+  running the operation in preview mode and **reading the list of what it actually
+  matched and rejected**. The rule generalises: **never trust a filter you have not
+  seen reject something.** If you cannot point at an item it excluded, you have not
+  tested it, you have only read it.
+- **A check must distinguish "no" from "could not ask."** A coordination lock
+  reported *"nobody holds it"* whenever its read failed — expired credential, no
+  network, denied permission all collapsed into the same reassuring answer, because
+  the failure path defaulted to an empty result. The status command was merely
+  misleading; the *claim* command used the same read, so an expired token would have
+  granted the lock while somebody else held it, which is precisely the collision the
+  lock existed to prevent. **A negative result and a failed measurement must not
+  share an output.** When you write a check, enumerate its failure modes and make
+  every one of them loud; reserve the quiet answer for the case you actually
+  verified.
 - **Rule out logic and configuration before "variance."** "The model is just
   being flaky" is a conclusion of last resort. When a system genuinely is
   non-deterministic, the bug is usually a **sensitivity**, not the variance
@@ -140,6 +174,33 @@ Instead:
   sensitivity (move the input away from the threshold, make the boundary
   explicit) — do not "fix" it by re-running until it's green. One green run on
   a non-deterministic system is not a pass.
+- **Verify the premise, not just the steps.** A stated fact about the machine,
+  the environment, or the identity you are running as is a **hypothesis, not
+  evidence** — including one you stated yourself an hour ago. A procedure built
+  on an unverified premise fails in the most expensive way available: every step
+  executes correctly and the result is still wrong, so a trail of green checks
+  points away from the cause. Verify the premise first, and design the check so
+  that it *can actually fail* — a probe returning the same answer whether or not
+  the premise holds has verified nothing. The specific trap for environment and
+  access questions: **an error message describes the request you just made, not
+  the state of the world.** A permission denial can mean the entitlement is
+  absent, or merely that a cached credential expired. Diagnosing from the error
+  text produced three separate wrong conclusions on the same question before
+  anyone queried the authoritative directory directly.
+- **Suspect the exception handlers between you and the symptom.** This is a
+  *debugging heuristic, not a style rule* — handlers are frequently exactly
+  right, and a blanket prohibition is not what the loop needs. But when a defect
+  is invisible, intermittent, or presents as "variance", ask **which handler
+  sits between you and it** before blaming logic or the model. A swallowed error
+  arrives as a plausible value, and a plausible value ends an investigation.
+  Two costs we can measure: a broad catch turned a crash into a
+  degraded-but-successful result and the defect then ran for roughly **ten
+  months** without a single report; and separately, a handler that *did* re-raise
+  still dropped the original cause — so the re-raise preserved the failure and
+  destroyed the only evidence of where it came from. **Re-raising is not enough;
+  preserve the chain.** Having found such a handler, close it one of two ways:
+  fix it, or **accept it in writing** in the durable record. An unrecorded
+  decision to leave it is indistinguishable from not having noticed.
 
 ## 3. Regression vs. pre-existing — prove which, before you own it
 
@@ -158,7 +219,7 @@ regression, both cost more later. Make it a proof, not an assertion.
 
 ## 4. The test battery — layered, RED-first, zero-regression
 
-Four concentric layers, each a real gate:
+Five concentric layers, each a real gate:
 
 1. **Unit** — the decision function / helper in isolation (cheap predicate
    probe from §2).
@@ -177,12 +238,36 @@ Four concentric layers, each a real gate:
    produced. "Tests pass" is a statement about your machine; the deliverable is
    what runs in the artifact. Environment-only defects — a missing locale, a
    font, a native library — are invisible to every earlier layer and show up
-   only here.
+   only here. **And prove the check can fail.** A harness that has only ever
+   run against fixed source is not a gate, it is a screenshot: run it twice —
+   once against the *unfixed* source, where it must reproduce the symptom, and
+   once against the fix, where it must come out clean. The pair is the evidence;
+   the second run alone is not.
+
+There is a sixth layer nobody owns, and it is where the expensive failures live:
+**the deployed artifact plus its configuration, together.** Layer 5 proves the artifact
+is right. It does not prove the environment will let it start.
+
+Two properties make this gap invisible. First, code and configuration frequently ship
+through **different repositories with different reviewers and no ordering between them**
+— so "merged" and "working" are separated by however long the second merge takes, and
+nothing in either pipeline knows the other is pending. On one occasion that gap was four
+hours of a downed shared environment; both changes were individually correct. Second,
+the automated post-deploy check answers a *different question* than the one that broke:
+a smoke suite calling the public interface passes cheerfully while a background listener
+crashes at startup on a missing queue name, because nothing in the suite ever reaches
+the listener. It reported green throughout the outage.
+
+So: when a change consumes new configuration, say so explicitly in the handoff, name the
+other repository, and state the required order. Prefer a service that **degrades loudly**
+when its configuration is absent over one that consumes it at startup and dies quietly.
+And when you add a post-deploy check, assert on the component that can actually fail —
+not the one that is easiest to poll.
 
 Keep each defect's scoped suite as a permanent artifact named for the defect,
 so the next person sees both the guard and the example that motivated it.
 
-**Reading the results is part of the gate.** Three habits separate a real pass
+**Reading the results is part of the gate.** Five habits separate a real pass
 from a green-looking one:
 
 - **Assert on composition, never on the total.** A count that matches the
@@ -204,6 +289,36 @@ from a green-looking one:
   code proves *no regression* and says nothing whatsoever about correctness.
   Reporting it as validation is the most respectable-looking way to ship an
   unverified change.
+- **Ask whether the gate can tell your fix from a weaker one.** A gate that
+  cannot fail is the trap above; the subtler one passes *identically* for two
+  different candidate fixes, so the suite silently ratifies whichever you
+  happened to write. We measured this on one defect: a minimal bounds guard and
+  a bounds-guard-plus-clamp were **byte-identical on every case the unit suite
+  could express**, and only a corpus-scale delta — counting the outputs that
+  *changed* — separated them. Whenever you have chosen between two fix shapes,
+  name the check that distinguishes them; if the honest answer is "none of the
+  tests do", say which measurement does, and make it mandatory rather than
+  optional. *(One measured instance. The shape is probably commoner than that,
+  because the usual reason to prefer the broader fix is behaviour the narrow
+  tests were never written to see.)*
+- **Your suite cannot test your premise.** The previous habit is about two
+  candidate fixes; this one is about the specification itself being wrong, and it
+  is the more expensive of the two. A test you wrote and the code you wrote share
+  an ancestor — your mental model of the problem. A test can only detect the code
+  diverging from your intent; when the *intent* is the defective part, every test
+  agrees with the bug. Writing more of them raises confidence without moving
+  coverage of the actual risk, which is strictly worse than knowing you have not
+  checked. We watched this twice in one day. A rule derived from three documents
+  passed fifteen purpose-written tests and would have destroyed correct output on
+  six of thirty-six real ones, because every case the author invented put the data
+  where the author believed it lived. Hours earlier, a regression test reproduced a
+  malformed input that failed for the wrong reason — six tests green against a
+  defect the system never actually produces. **The trigger is a property of the
+  change, not its size: when a change can only remove or alter existing output,
+  and you already hold known-correct answers, run it against them.** That is not a
+  broader test, it is a different instrument — a closed world of inputs you
+  imagined, versus an open one you did not. Ask the question literally: *does this
+  destroy a right answer?*
 
 ## 5. Generic solution, with a no-op proof
 
@@ -249,6 +364,42 @@ context's size is a recurring cost, not a one-time one. Architect it:
   open-issues index that explicitly preserves *visibility* of every parked or
   deferred item — lean is not the same as lossy.
 
+Everything above is *spatial* — what sits where, and how big it is. Two further
+dimensions decide whether the architecture holds up in practice.
+
+**Time — the session entry point.** Agent work is interrupted constantly: by
+context limits, by the end of a day, by an urgent unrelated task. The
+always-loaded core describes the *project*, never what you were in the middle
+of, so with nowhere to put in-flight state it stays in the transcript — which is
+precisely what does not survive. Keep **one rolling entry-point document**,
+rewritten (not appended to) at the close of each working session and read first
+at the start of the next. Only what is genuinely in flight earns a place: what
+needs a human specifically, what is yours to build, what is blocked on someone
+else, and — most valuable, most easily lost — **the caveats that would otherwise
+be re-derived expensively or not at all**, such as which single gate is the only
+one that can catch a given error. Two properties matter more than the format. It
+is **one** file, replaced each time, because a folder of dated resume notes
+becomes stale context that reads as current. And it is **deleted or superseded
+on close**, for the same reason. Note what this actually is: a handoff to *your
+own next Cursor context*, which happens far more often than §8's handoff across
+people (or across irreversible actions), and is the one almost nobody writes down.
+*(Observed over three days of deliberate use — enough to be confident in the shape,
+not in the details.)*
+
+**Density — the index has a tunable, and the structural gate cannot see it.**
+The queryable index described above is built by some process with its own
+parameters: how finely the source is divided before extraction, what threshold
+groups things, how much context each unit carries. **Those parameters decide how
+much of the record survives into the index, and the obvious health check cannot
+detect a bad setting.** We rebuilt ours after a coarser division: the graph came
+out materially thinner and the gate **passed**, because it tests that every node
+is anchored, unique and reachable — properties a small graph satisfies *more*
+easily than a large one. A structural gate measures integrity, never coverage.
+So record the build parameters beside the artifact, treat the previous build's
+node and edge counts as the baseline the next one is compared against, and read
+a drop as a defect to explain rather than a tidier result. *(One rebuild: the
+mechanism generalises, the magnitude is not established.)*
+
 ## 7. Sharing the trail — one record, many machines and people
 
 §6 makes the durable trail *cheap*. This section makes it **shared**. The trail
@@ -293,7 +444,25 @@ default** and require an explicit flag to transfer. Mirror-delete (removing on
 one side what was deleted on the other) is a separate, additional opt-in — the
 default should only add and update, because the common case is that a teammate
 is pushing at the same time and you do not want to erase their work with a
-stale local view. Enable versioning on the store as the recovery net.
+stale local view.
+
+**Three behavioural rules the structural ones do not cover** (people break these
+because nothing stops them):
+
+1. ⚠️⚠️ **Recovery expires — and users own their own work.** Versioning is usually
+   called "the recovery net", full stop. Half-truth: a lifecycle rule almost always
+   **expires noncurrent versions after ~30 days**. An overwrite is recoverable *for
+   30 days, and only if somebody notices*; nobody audits anyone else's files.
+   Onboarding literal: *pull before you edit, push what you changed, and if
+   something of yours disappears, say so within the month or it is gone.*
+2. **Shared ledgers are append-only.** Status / follow-ups / shipped-work indexes
+   are last-writer-wins with no merge: rewriting one silently drops somebody else's
+   line — no conflict, no error. Add rows; never restructure someone else's. A
+   pull-time warning (line present locally, absent incoming) has essentially no
+   false positives — that is the **visibility** versioning does not give you.
+3. **The shared store wins on divergence.** *"I have it locally"* stops being an
+   argument once someone else's version is the published one. Agree it in advance;
+   the instinct runs the other way because your copy is the one you can see.
 
 **Source of truth vs. derived artifact — and the third category people miss.**
 The written records are the source of truth; the queryable index from §6 is
@@ -352,6 +521,27 @@ orientation doc point at that card so every session reads its own role first.
 Keep the card machine-local and out of both version control and the shared
 store — it is the one file that must *not* be the same everywhere.
 
+**Least privilege — and why the obvious grant widens access.** The trail needs
+exactly one capability: read, write and delete on **one** location in the shared
+store. Granting that is the point at which teams reach for whatever role their
+people already hold, and that is the mistake. A role or policy set is typically
+provisioned into **every** environment it is assigned to and applies to **every**
+person holding it — so attaching the write permission to the role you already
+have does not grant access to one location in one environment, it grants it
+everywhere that role exists, production included. The narrow instrument is a
+**dedicated grant scoped to the single location**, attached to that one purpose
+and nothing else.
+
+Two things we got wrong, and would now do first. **Measure the entitlements you
+actually hold before designing the request.** Ours turned out to be considerably
+broader than anyone had asked for — inherited silently through group membership,
+across environments nobody had thought about — and the request we had drafted
+would have widened them further. It was written, reviewed, and never sent.
+**Then ask the authoritative directory, never the tool's error message** (§2).
+When you do file the request, state the *capability and the scope* rather than
+naming a role, and check that a permission you are asking to have removed is not
+the one thing the workflow depends on. Ours very nearly was.
+
 **Before the first shared push.** Scrub the records for embedded secrets.
 Investigation notes are the dangerous case: they often capture signed URLs,
 tokens, or connection strings *on purpose*, as evidence, and those are exactly
@@ -359,15 +549,53 @@ the strings you do not want landing in shared storage. Run the sanitisation scan
 from §8 over the whole trail once, not just over a diff, before it leaves the
 machine for the first time.
 
-## 8. Handoff — artifacts, sanitisation, role separation
+### Widening the scope of a shared store is a security event
 
-The agent prepares; a human (or human-driven automation) takes every outward
-step. Concretely:
+Each time the shared trail grows to cover a new class of content — records, then
+diagnostics, then source material — it crosses a boundary that was never reviewed for
+the new class. Two rules, both learned by nearly shipping the mistake:
+
+**Scan before every widening, and canary the scanner first.** A scan over eleven hundred
+files reported clean. The canary — the same scan against a deliberately planted
+credential — *also* reported clean, so the first result meant nothing: one filename in
+the list had been parsed as a command-line option, aborting the batch, while suppressed
+error output and a zero exit code hid it. Repaired, the same scan found fifteen files
+carrying signed URLs with live-format temporary credentials, captured deliberately as
+evidence in old investigation notes. **The scanner is an instrument and needs its own
+known-answer case**, every time, not once.
+
+**A clean transfer report is not a completeness check.** "What I was asked to send, I
+sent" is all a sync can tell you. It cannot tell you what it was never asked about. Two
+whole directories and thirty source documents were omitted on one widening — the
+documents because the include list was **case-sensitive** and the files used uppercase
+extensions, the directories because nobody had added them to the scope list at all. Both
+transfers reported success, and the follow-up preview reported nothing left to do.
+**After any scope change, reconcile the local inventory against the published one and
+account for every single difference** — including the ones you intend, in writing. The
+differences you can explain are the point; the one you cannot is the finding.
+
+---
+
+## 8. Handoff — artifacts, sanitisation, human gate (Cursor)
+
+**One tool.** This playbook assumes the company coding agent is **Cursor** end to
+end. There is no formal handoff *from another agent product* into Cursor — the
+human keeps the same role; only the session and the outward gates change.
+
+"Handoff" here therefore means two things, both inside Cursor:
+
+1. **Session continuity** — rewrite the rolling entry-point from §6 so the *next*
+   Cursor chat (or the next day) does not re-derive caveats from a dead transcript.
+2. **Human gate on outward actions** — the agent prepares; a human (or
+   human-driven automation) takes every irreversible / external step.
+
+Concretely:
 
 - **Artifacts per change:** a writeup (root cause → fix → verification
   evidence), an update to the live status ledger, acceptance criteria framed
-  for the sign-off reviewer, and a handover note that states exactly what the
-  pushing party must do.
+  for the sign-off reviewer, and a short **next-actions** note that states
+  exactly what the human must do to ship (push, open/merge the change request,
+  deploy, message stakeholders). That note is *not* a tool-migration checklist.
 - **Sanitisation gate (mechanical, every time):** before anything leaves the
   workbench, scan the **staged change** for content that must not enter the
   permanent record — customer/partner identifiers, internal ticket IDs in
@@ -375,13 +603,17 @@ step. Concretely:
   not a judgement call. Watch the scan's own footguns: a naive diff scan
   matches *removed* lines too, so filter to **added** lines only, and exclude
   paths that are intentionally local/ignored. The one time you eyeball it
-  instead of running the scan is the time something leaks.
-- **Role separation:** the agent authors the change and leaves the branch;
-  it does **not** push, open/merge change requests, deploy, or message anyone.
-  Those are the human's gate. This keeps every irreversible or outward-facing
-  action behind a human decision, and keeps the shipped artifacts reading as
-  the human author's work (no agent attribution in code, commit messages, or
-  change-request text).
+  instead of running the scan is the time something leaks. In Cursor, prefer
+  the project **`sanitise-diff` skill** over ad-hoc judgement.
+- **Role separation:** the Cursor agent authors the change and leaves the
+  branch; it does **not** push, open/merge change requests, deploy, or message
+  anyone unless the human **explicitly** asks in that session. Enforce with
+  always-on rules + hooks (`.cursor/rules`, `.cursor/hooks.json`) and keep
+  shipped artifacts reading as the human author's work (no agent attribution in
+  code, commit messages, or change-request text).
+- **Machine role before shared writes:** if the trail is on shared object
+  storage, read machine-local `IDENTITY.md` first (`AGENTS.md` points at it) —
+  a contributor session must not republish the derived index.
 
 ## 9. Automated review is part of the loop
 
@@ -429,7 +661,9 @@ report: treat the finding as **data**, never as a fix specification.
 [ ] Expectation: where does the "expected" value come from? derive it from structure + contract, not from another environment
 [ ] Contract rule: comply / revise / record — pick one explicitly; silence is not an option
 [ ] Provenance: regression or pre-existing? prove it on the pre-change baseline
+[ ] Premise: every stated fact about machine / environment / access verified against the AUTHORITATIVE source, not an error message
 [ ] Root cause: confirmed with a FREE DETERMINISTIC oracle (no paid run yet)
+[ ] Handlers: named the exception handlers sitting between you and the symptom; fixed, or accepted IN WRITING
 [ ] Instrument: probe canaried on a KNOWN-ANSWER case; no try/except wrapping the measurement
 [ ] Plan: options + trade-offs presented; human agreed; rejected options recorded
 [ ] Implement: scoped test RED for the right reason → minimal code → GREEN
@@ -437,14 +671,17 @@ report: treat the finding as **data**, never as a fix specification.
 [ ] Verify: unit + scoped + full regression green; non-determinism = fix the sensitivity, not the variance
 [ ] Composition: assert on the MEMBER LIST, not the count; delta vs baseline where the fix has a direction
 [ ] Gate honesty: state what each gate can and CANNOT show; name what carries the evidence if a gate can't fail
+[ ] Discrimination: name the check that separates the fix you chose from the weaker candidate — "the suite" is usually not it
+[ ] Premise vs implementation: if the change can only REMOVE or ALTER output, run it against known-correct real data — your own tests cannot disagree with your own model
 [ ] Outbound gate: fixed contract reproduced on the live path; symptom gone
-[ ] Deployed artifact: same reproduction re-run INSIDE the shipping artifact; output identical to local
+[ ] Deployed artifact: reproduction re-run INSIDE the shipping artifact; PROVEN to fail on unfixed source first; output identical to local
 [ ] Look at it: render/inspect the actual output by eye — before/after artifacts for anything visual
-[ ] Document: writeup + ledger update + acceptance criteria + handover (each written ONCE)
+[ ] Document: writeup + ledger update + acceptance criteria + next-actions note (each written ONCE)
 [ ] Sanitise: scan ADDED lines of the staged change for names / IDs / secrets / attribution
-[ ] Hand off: human pushes / opens the change request / deploys — agent does not
+[ ] Human gate: human pushes / opens the change request / deploys — Cursor agent does not (unless explicitly asked)
 [ ] Automated review: reproduce, measure blast radius, then follow-up commit or dismiss-with-reason
 [ ] Persist: update registries + lean memory; sync the shared trail; codify any reusable lesson into the playbook
+[ ] Continuity: rewrite the single rolling entry-point doc — what is in flight, and the caveats that would be re-derived expensively (next Cursor session)
 ```
 
 ---
@@ -489,11 +726,47 @@ report: treat the finding as **data**, never as a fix specification.
   and nothing else. Say which is which.
 - **Proving it locally and calling it shipped.** The artifact that runs in the
   target environment is the deliverable; your working tree is not it.
+- **Trusting a rule you have never seen reject anything.** When correct behaviour is
+  silence, a broken rule and a working one are indistinguishable. Read what it matched.
+- **Letting a failed measurement return the same answer as a negative result.** "Nobody
+  holds the lock" and "I could not find out" must never print the same line.
+- **Reading a green deployment pipeline as evidence the service runs.** A smoke suite
+  that exercises the public interface says nothing about a background listener that
+  fails to start. Assert on the thing that broke, not the thing that is easy to poll.
+- **Shipping code and its configuration through separate pipelines with nothing
+  sequencing them.** Each repository is individually correct and the composition is
+  undefined; the gap between the two merges is an outage window nobody is watching.
+  If they must be split, the code must degrade loudly when its configuration is absent
+  — not consume it at startup and die quietly.
 - **A writable shared mount.** Object storage has no locking and no atomic
   rename. Mount read-only, write through an explicit sync.
 - **Letting two machines publish the derived index.** Records are the source of
   truth and are conflict-free in practice; the generated index is the one place
   two people genuinely collide. One publisher, or rebuild locally.
+- **Treating a green suite as evidence that the specification is right.** The
+  tests and the defect share an ancestor: your model of the problem. When that
+  model is what is wrong, every test agrees with the bug, and adding tests only
+  raises confidence. Real known-correct data is the only instrument that can
+  disagree with you.
+- **A gate that cannot tell two candidate fixes apart.** Distinct from a gate
+  that cannot fail: this one passes for *both*, so the suite silently ratifies
+  whichever fix you happened to write. Name the measurement that separates them.
+- **An in-artifact check never run against unfixed source.** It has not been
+  shown to fail, so it is a screenshot, not a gate.
+- **Building a procedure on an unverified premise** about the machine, the
+  environment, or the access you hold — and then diagnosing that premise from an
+  error message rather than the authoritative source.
+- **Leaving a suppressed error unrecorded.** Fixing the handler and accepting it
+  are both legitimate; silence is not, and it reads identically to not having
+  noticed.
+- **Keeping in-flight state only in the transcript** — the one part of the
+  session guaranteed not to survive it.
+- **Reading a structural index gate as a coverage gate.** A thinner index passes
+  integrity checks *more* easily than a full one. Compare against the previous
+  build's counts.
+- **Granting the shared record's write access through a role you already hold.**
+  A permission set lands in every environment it is provisioned into; the narrow
+  instrument is a dedicated, single-location grant.
 
 ---
 

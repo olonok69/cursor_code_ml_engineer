@@ -92,7 +92,8 @@ disagree. A per-file sync cannot express atomicity; the consistency check has to
 live in the data.
 
 Enable **versioning on the bucket** either way. It is the recovery net for the day
-someone gets this wrong.
+someone gets this wrong — but see the expiry caveat in the next section before you
+lean on it.
 
 ---
 
@@ -112,7 +113,7 @@ changes records does not rebuild; they flag it, and the publisher rebuilds. The 
 is deliberately **one file per request**:
 
 ```bash
-kg_refresh.sh request "added the sst-6043 record"   # -> refresh_queue/<utc>-<machine>.request
+kg_refresh.sh request "added the payment-retry record"   # -> refresh_queue/<utc>-<machine>.request
 ./data-push.sh --go
 ```
 
@@ -137,9 +138,9 @@ passes.
 This is the part that only exists because agents are involved, and it is the easiest
 to skip.
 
-Once the same trail is reachable from several machines with **different roles**, an
-agent session (Cursor or Claude Code) must know *which machine it is on* before it
-acts. Otherwise a contributor machine will helpfully rebuild and republish the
+Once the same trail is reachable from several machines with **different roles**, a
+**Cursor** agent session must know *which machine it is on* before it acts.
+Otherwise a contributor machine will helpfully rebuild and republish the
 shared graph — the one thing its role forbids — and be entirely pleased with itself
 for doing so.
 
@@ -158,12 +159,79 @@ Then:
 
 `IDENTITY.md` records the declared role **and runs live checks** — which account are
 we authenticated as, is the bucket reachable, is the mount present. The repository
-orientation doc (`AGENTS.md` in Cursor, `CLAUDE.md` in Claude Code) points at it, so every
-session reads its own role first.
+`AGENTS.md` (and/or always-on `.cursor/rules`) points at it, so every session reads
+its own role first.
 
 **`IDENTITY.md` is machine-local.** It is gitignored, never synced, and never
 packaged. It is the one file that must *not* be identical everywhere. Re-run
 `identity.sh --write` after any `config.env` change.
+
+---
+
+## The rules a shared store needs
+
+Single-writer and pairs-move-together (above) are the *structural* rules. These are the
+behavioural ones — the ones people break, because nothing stops them.
+
+### ⚠️⚠️ Recovery has an expiry, and users own their own work
+
+Versioning is routinely described as "the recovery net", full stop. That is a half-truth
+worth correcting explicitly, because people plan around it.
+
+A bucket with versioning on will almost always also carry a lifecycle rule expiring
+**noncurrent** versions — 30 days is a common default. So an overwrite is recoverable
+**for 30 days, and only if somebody notices in time**. Nobody is auditing other people's
+files, and there is no backstop on day 31.
+
+State it plainly in onboarding rather than implying a safety net that thins out:
+
+> Pull before you edit. Push what you changed. If something of yours disappears, say so
+> within the month or it is gone.
+
+The alternative — a team that believes storage is durable in a way it is not — produces
+exactly one kind of incident, and it is unrecoverable by the time anyone reports it.
+
+### Shared ledgers are append-only
+
+A handful of files are *shared by nature*: a status ledger, a shipped-work index, an open
+follow-ups list, a test map, a record of what has been told to customers. Everyone writes
+to them.
+
+Object sync is last-writer-wins with no merge, so **rewriting one of these silently drops
+somebody else's line**. There is no conflict, no error, no prompt. Make the rule explicit:
+**add rows, never restructure someone else's**.
+
+This is cheap to *detect* even though it is expensive to prevent. Append-only means a line
+present locally and absent in the incoming copy is either a deliberate deletion or a
+clobber — so a pull-time check that diffs the two and warns has essentially no false
+positives. A few lines of shell, not a merge engine. That check is the visibility that
+versioning does not give you: versioning makes the loss *recoverable*, not *noticed*.
+
+### Per-task folders need no coordination at all
+
+The reason this model works without locking is that the bulk of the corpus is partitioned
+by construction: one folder per task, one owner per task. No protocol is needed for the
+90% case. Reserve the ceremony for the genuinely shared files — the derived artifact and
+the ledgers — and let everything else be free.
+
+Design for this deliberately. If your layout forces two people into the same file for
+routine work, no amount of process will save it.
+
+### The shared store is authoritative on divergence
+
+When a local copy and the published copy disagree, the published one wins. "I have it
+locally" stops being an argument the moment someone else's version is the one everybody
+pulls.
+
+This needs saying out loud because the instinct runs the other way — your local copy is
+the one you can see, and it feels more real. A team that has not agreed this in advance
+resolves each divergence by argument instead of by rule.
+
+### Mirror-delete belongs to one role
+
+Covered under `--delete` below, but it belongs in this list too: the flag that propagates
+a removal is the same flag that destroys unpushed work from a stale view. Scope it to the
+publisher role, not to whoever remembers the caveat.
 
 ---
 
@@ -216,7 +284,9 @@ runbook applies here unchanged).
   tokens *on purpose*, as evidence of a bug — and those are exactly the strings you
   do not want in shared storage. Run the sanitisation scan over the whole trail once,
   not just over a diff.
-- **Versioning.** Turn it on before the first push, not after the first accident.
+- **Versioning.** Turn it on before the first push, not after the first accident — and
+  read its retention policy at the same time. A default lifecycle rule that expires
+  noncurrent versions turns "recoverable" into "recoverable for N days".
 
 ---
 

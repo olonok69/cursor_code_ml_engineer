@@ -98,9 +98,12 @@ verificar, no hechos.
 
 ## 6. Viaje entre máquinas (main ⇄ portátil)
 
-El grafo es un **artefacto derivado** (función pura del corpus) → **nunca viaja de vuelta**: la máquina que
-tenga el corpus actual lo reconstruye. Dos subcomandos cierran el círculo (la memoria no viaja en el delta
-por defecto):
+El grafo es un artefacto **casi** derivado → **el grafo construido no viaja de vuelta**: la máquina que
+tenga el corpus actual lo reconstruye. ⚠️ **Con una excepción que NO es negociable:** `community_labels.json`
+(los nombres de comunidad, escritos a mano) **no es una función pura del corpus** — nada lo regenera, y en
+una reconstrucción real sobrevivió **menos del 1%**. Si se editó en la otra máquina, **tiene que viajar de vuelta**,
+emparejado con el grafo contra el que se escribió. "Derivado" es propiedad del fichero, no de la carpeta. Dos
+subcomandos cierran el círculo (la memoria no viaja en el delta por defecto):
 
 ```bash
 # Bare metal (portátil nuevo): instala tooling + fija intérprete + verifica kg

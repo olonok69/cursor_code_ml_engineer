@@ -206,13 +206,16 @@ operating model. The model matters more than the technology:
 
 | Rule | Why |
 |---|---|
-| **Narrow scope**: only `changes/**/*.md` + the graph | Confidentiality and size. Widening later is easy; retracting is not. |
+| Scope grows **in reviewed phases** | It started narrow (`changes/**/*.md` + the graph) and widened in reviewed phases — **with the owner signing off each step**. Widening is easy; retracting is not. ⚠️ **Every widening is a security event**: scan first, **canary the scanner**, then **reconcile** (a clean transfer report only says *"what I was asked to send, I sent"*). |
 | **Write via sync, read via read-only mount** | Object storage has **no** locking or atomic rename. A writable mount invites corruption that shows up weeks later. |
 | **Dry-run by default**, explicit `--go`; `--delete` separate | The normal case is a teammate pushing at the same time; an exact mirror from a stale local view **deletes their work**. |
 | **Docs are the source of truth; the graph is derived** | Per-ticket files almost never collide. The generated graph is the **only** real contention point → **one** machine publishes it. ⚠️ "Rebuild locally" is only safe if the generated tree is *purely* derived — see the note below. |
 | **"Derived" is a property of the file, not of the folder** | Inside the generated tree lives a **hand-authored** file (the curated community names) that nothing regenerates: on a rebuild, **<1%** survived. Classify per file — *source* / *derived* / *authored inside derived* — and treat the third as source. |
 | **Pairs must move together** | The names overlay is only meaningful against the graph it came from, but sync compares **object by object** → new graph + old names = names glued to the wrong community, **with no error**. Stamp the overlay with a **fingerprint of the graph** and make the health check fail loudly. |
 | **Coordinate without locks** | To request a rebuild, each contributor writes **their own file** in a queue (`refresh_queue/<utc>-<machine>.request`). Distinct keys never collide; a shared queue file would be lost to last-writer-wins. It is also the same contract a scheduled job will consume. |
+| ⚠️⚠️ **Recovery EXPIRES — and users own their own work** | Versioning almost always **expires noncurrent versions after 30 days**. Recoverable **for 30 days, and only if somebody notices**. Onboarding literal: *pull before you edit, push what you changed, and if something of yours disappears, say so within the month or it is gone.* |
+| **Shared ledgers are append-only** | Last-writer-wins with no merge: **rewriting one silently drops somebody else's line**. Add rows; never restructure someone else's. A pull-time warning has essentially no false positives — the **visibility** versioning does not give you. |
+| **The shared store wins on divergence** | *"I have it locally"* stops being an argument once someone else's version is the published one. Agree it **in advance**. |
 | **Each machine declares its identity** | See below: this is what is specific to working with agents. |
 
 ### What is specific to agents: the machine has a role
@@ -226,7 +229,7 @@ exactly the one thing it must not do — and report it as work well done.
 The solution is small: each machine declares `MACHINE_NAME` and `MACHINE_ROLE` in its
 config, a **machine-local** `IDENTITY.md` is generated (with live checks: which
 account is authenticated, whether the bucket responds, whether the mount is up), and the
-repo's `AGENTS.md` (or `CLAUDE.md` in Claude Code) **points at it**, so every
+repo's `AGENTS.md` **points at it**, so every
 session reads its own role first. `IDENTITY.md` is the only file that **must not**
 be the same everywhere: gitignored, never synced, never packed.
 
