@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Cursor — AI methodology — For new joiners (Cursor)</title><style>
+body{font:15px/1.62 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#172b4d;max-width:60em;margin:2rem auto;padding:0 1.5rem}
+h1{font-size:1.9em;border-bottom:3px solid #0052cc;padding-bottom:.3em}
+h2{font-size:1.4em;margin-top:2em;color:#0747a6}h3{font-size:1.15em;margin-top:1.6em}
+code{background:#f4f5f7;border-radius:3px;padding:.1em .35em;font-family:SFMono-Regular,Consolas,monospace;font-size:.88em}
+pre.code{background:#f4f5f7;border:1px solid #dfe1e6;border-radius:4px;padding:.9em;overflow-x:auto}
+pre.code code{background:none;padding:0}
+table{border-collapse:collapse;width:100%;margin:1.1em 0}
+th,td{border:1px solid #dfe1e6;padding:.55em .7em;text-align:left;vertical-align:top}
+th{background:#f4f5f7}
+blockquote{border-left:4px solid #ffab00;background:#fffae6;margin:1.1em 0;padding:.7em 1em}
+blockquote p:first-child{margin-top:0}blockquote p:last-child{margin-bottom:0}
+hr{border:0;border-top:1px solid #dfe1e6;margin:2em 0}
+.nav{font-size:.9em;background:#f4f5f7;padding:.6em .9em;border-radius:4px;margin-bottom:1.5em}
+</style></head><body>
+<h1>Cursor — AI methodology — For new joiners (Cursor)</h1>
+<div class="nav"><a href="00-index.html">Index</a> · <strong>For new joiners (Cursor)</strong> · <a href="02-onboarder.html">Onboarder checklist (Cursor)</a> · <a href="03-shared-record.html">Shared record (S3 sync)</a> · <a href="04-diagnose.html">Diagnose before you spend</a> · <a href="05-verify.html">Verify: the layered test battery</a> · <a href="06-context.html">Context architecture</a> · <a href="07-human-gate.html">Human gate, continuity, review, checklist</a></div>
+<h2>Welcome — start here (Cursor)</h2>
+<p><strong>Written for you</strong>, the person joining. Your colleague has a companion checklist (<code>Onboarder checklist</code>) — you do not need to read that one.</p>
+<p><strong>You start in Cursor.</strong> These Confluence pages + the Cursor IDE are your path. Open <code>document-parser-lambda</code> in Cursor from day one — that is how always-on guidance (<code>AGENTS.md</code>, <code>.cursor/rules</code>, skills) loads. Do not wait for another tooling setup.</p>
+<p>Work through this in order. Sections 1–4 are setup; 5 onwards is how the team works. Budget half a day, most of which is waiting on access.</p>
+<p><strong>What your lead also gives you (not optional):</strong> the <code>ils-s3-sync-YYYYMMDD.zip</code> package (scripts + <code>mount-s3.deb</code>). Confluence explains <em>what</em> to do; the zip is <em>how</em> you run pull/push. Both are part of onboarding — Confluence does not replace the zip.</p>
+<hr/>
+<h3>1. What you are joining</h3>
+<p>We build and maintain <strong><code>document-parser-lambda</code></strong> — an AWS Lambda that extracts structured data from legal side letters and comment memos (DOCX, DOC, PDF) using LLM-assisted parsing. It is one service in a larger system:</p>
+<table><thead><tr><th>Repo</th><th>What it is</th><th>Do you edit it?</th></tr></thead><tbody><tr><td><code>document-parser-lambda</code></td><td>our service — extraction</td><td>✅ <strong>yes, this is ours</strong></td></tr><tr><td><code>monolith</code></td><td>Django backend; stores and re-serves what we extract</td><td>❌ read-only context</td></tr><tr><td><code>frontend</code></td><td>React SPA the reviewers actually look at</td><td>❌ read-only context</td></tr><tr><td><code>infrastructure</code>, <code>helm-values</code></td><td>Terraform + deployment config</td><td>❌ read-only context</td></tr></tbody></table>
+<p>You read the others freely to understand contracts. You do <strong>not</strong> edit, commit or push to them. If something needs fixing there, we write it up and hand it to the responsible team.</p>
+<p><strong>The single most useful thing to internalise early:</strong> what QA, product and clients see is the JSON returned by the monolith&#x27;s <code>get-sl-upload-status</code> endpoint. Everything inside our repo — prompts, thresholds, provider routing — is implementation detail. That JSON is the contract.</p>
+<hr/>
+<h3>2. Day 0 — start in Cursor (do this first)</h3>
+<ol>
+<li>Install <strong>Cursor</strong>, sign in.</li>
+<li>Clone / get <code>document-parser-lambda</code>, then <strong>File → Open Folder</strong> on that repo root (not a parent monorepo unless your lead says otherwise).</li>
+<li>Confirm <strong><code>AGENTS.md</code></strong> is at the root and Customize → MCP shows your team&#x27;s tools green. Always-on rules live under <code>.cursor/rules/</code>; skills under <code>.cursor/skills/</code> (<code>kg</code>, <code>sanitise-diff</code>, …). Detail stays in <code>data/changes/</code> after you pull — do not paste it into rules.</li>
+<li>Habit from day one: <strong>Plan → agree → implement</strong> (Cursor <strong>Plan</strong> mode for non-trivial work). Do <strong>not</strong> let the agent push, open/merge PRs, or deploy unless you explicitly ask in that session.</li>
+<li>Ask your lead for <strong><code>ils-s3-sync-YYYYMMDD.zip</code></strong> if you do not have it yet — you need it for §4. While AWS access is pending, you can already read <code>AGENTS.md</code> and skim the playbook siblings (Diagnose → Human gate).</li>
+</ol>
+<hr/>
+<h3>3. Access — this is the long pole, chase it first</h3>
+<p>You need AWS SSO on account <strong>055622654641</strong> with two permission sets:</p>
+<table><thead><tr><th>Permission set</th><th>Gets you</th></tr></thead><tbody><tr><td><code>DeveloperNonprod</code></td><td>CloudWatch logs, Lambda config, SQS, ECR, and <strong>read</strong> on the shared bucket</td></tr><tr><td><code>KnowledgeBaseS3</code></td><td>⚠️ the <strong>only</strong> role that can write the shared bucket — i.e. contribute your own work</td></tr></tbody></table>
+<p>Ask your colleague where the request stands before doing anything else. You can make progress with <code>DeveloperNonprod</code> alone (read-only), so if only one has landed, start anyway.</p>
+<p>Once you have it:</p>
+<pre class="code"><code>aws configure sso                      # start URL https://ils-provision.awsapps.com/start/
+                                       # sso-region us-east-1
+aws sso login --profile &lt;your-profile&gt;
+aws sts get-caller-identity --profile &lt;your-profile&gt;     # must show 055622654641</code></pre>
+<blockquote><p>⚠️⚠️ <strong>Learn this now, it will save you hours.</strong> When an AWS command fails with <code>Token has expired</code> or <code>ForbiddenException</code>, that describes your <strong>cached login</strong>, not your permissions. Always <code>aws sso logout &amp;&amp; aws sso login</code> <em>first</em>, then re-read the error.</p></blockquote>
+<p><strong>Shell environment:</strong> sync scripts expect Linux or <strong>WSL2</strong> (<code>apt-get</code>, <code>mount-s3.deb</code>). If Cursor runs on Windows, do S3 sync steps inside WSL against the same <code>data/</code> tree (<code>/mnt/d/...</code>).</p>
+<hr/>
+<h3>4. Set up the shared record</h3>
+<p>Ticket documentation, diagnostics, client source documents and a knowledge graph live in <code>data/</code> inside the repo. <code>data/</code> is <strong>gitignored</strong> — it never goes to GitHub. It is shared through S3 instead.</p>
+<p>Your local <code>data/</code> is a <strong>working copy</strong>. The bucket is the source of truth.</p>
+<p>Unzip <strong><code>ils-s3-sync-YYYYMMDD.zip</code></strong>, then:</p>
+<pre class="code"><code># in the s3-sync folder from the zip
+#   edit config.env:
+#     LOCAL_DATA     absolute path to YOUR document-parser-lambda/data
+#     MACHINE_NAME   something distinctive — it shows up in shared state
+#     MACHINE_ROLE   contributor          &lt;-- yours is always this
+#     READ_PROFILE   dev-nonprod          &lt;-- only if you are read-only for now
+
+sudo apt-get install -y ./mount-s3.deb    # x86_64 (WSL/Ubuntu)
+./identity.sh --write                     # writes IDENTITY.md; confirm CONTRIBUTOR
+./validate.sh                             # must print MACHINE READY ✅
+./data-pull.sh                            # dry run — this is the default
+./data-pull.sh --go                       # ~888 MiB, takes a while</code></pre>
+<p><code>MACHINE READY ✅ (read-only — N write operation(s) denied as expected)</code> is a <strong>pass</strong> if you are read-only. A denied write there is correct, not broken.</p>
+<p>After identity is written: <strong><code>AGENTS.md</code></strong> (already in the repo) points Cursor at this machine&#x27;s <code>IDENTITY.md</code> so every session reads <strong>contributor</strong> before shared writes.</p>
+<p>Full diagram, troubleshooting, and publisher rules: sibling page <strong>Shared record (S3 sync)</strong>.</p>
+<hr/>
+<h3>5. ⚠️⚠️ The rules that actually matter</h3>
+<p><strong>1. Recovery expires at 30 days, and you own your own work.</strong> The bucket is versioned, so if someone overwrites your file it can be recovered — for 30 days, and only if somebody notices. Nobody audits your rows. <strong>Pull before you edit, push what you changed</strong>, and if something of yours disappears, say so within the month or it is gone.</p>
+<p><strong>2. Write via sync, read via mount.</strong> <code>data-push.sh</code> / <code>data-pull.sh</code> work on real local disk. The mount at <code>~/s3-ils-data</code> is read-only <em>on purpose</em> — object storage has no locking and no atomic rename.</p>
+<p><strong>3. Never use <code>--delete</code>.</strong> It mirrors exactly. From a stale local view it erases a colleague&#x27;s work. Publisher-only.</p>
+<p><strong>4. Never push <code>knowledge-graph/</code>, never rebuild/publish the KG.</strong> The graph tree includes <strong>hand-authored</strong> community names that nothing regenerates. Two machines publishing destroys them silently. You <em>read</em> it in Cursor with the project <strong><code>kg</code> skill</strong> (or ask the agent; under the hood: <code>.\scripts\kg_query.ps1</code> / <code>kg_query.sh</code>).</p>
+<p>If you think a refresh is due, <strong>file a request</strong> and push that — do not rebuild:</p>
+<pre class="code"><code>bash ../knowledge-graph/kg_refresh.sh request &quot;why you think so&quot;
+./data-push.sh --go</code></pre>
+<p><strong>5. Shared ledgers are append-only.</strong> <code>STATUS.md</code>, <code>TICKETS.md</code>, <code>FOLLOWUPS.md</code>, <code>TEST_MAP.md</code>, <code>CUSTOMER_GUIDANCE.md</code>. Add your rows; never rewrite someone else&#x27;s. Last-writer-wins drops their line silently — <code>ledger_check.sh</code> only <em>warns</em> on the next pull.</p>
+<p>Everything else is naturally safe: <strong>your ticket folders are yours.</strong> <code>changes/sst-NNNN/</code> is one person&#x27;s workstream.</p>
+<hr/>
+<h3>6. Confidentiality — non-negotiable</h3>
+<p>Anything pushed to <strong>GitHub</strong> (<code>src/</code>, <code>tests/</code>, commit messages, PR titles and descriptions) must contain:</p>
+<ul>
+<li>❌ <strong>no client names</strong> — funds, firms, investors, matters</li>
+<li>❌ <strong>no ticket IDs</strong> in code or config <strong>bodies</strong> (filenames like <code>test_sst_1234_*.py</code> OK)</li>
+<li>❌ <strong>no AI/agent attribution</strong> anywhere — the author of record is you</li>
+</ul>
+<p>✅ Fine inside <code>data/**</code> (gitignored). Ticket IDs are fine in commit/PR text.</p>
+<p>Before you stage a push of code: run the repo <strong><code>sanitise-diff</code></strong> skill in Cursor every time.</p>
+<hr/>
+<h3>7. How a piece of work actually goes (Cursor)</h3>
+<ol>
+<li><strong>Triage before code.</strong> Confirm the symptom in <em>our</em> <code>get-sl-upload-status</code> JSON. If the data is correct there, push back — do not start work in this repo.</li>
+<li><strong>History first.</strong> Read <code>data/changes/&lt;TICKET&gt;/</code> and query the KG (<code>kg</code> skill / Agent) before inventing a fix shape.</li>
+<li><strong>Plan, agree, then code</strong> in Cursor. No production code until the plan is agreed.</li>
+<li><strong>Test first.</strong> Failing scoped test → minimal code → green.</li>
+<li><strong>Verify before claiming done.</strong> Look at the actual output — not just counts.</li>
+<li><strong>Document</strong> in <code>data/changes/&lt;TICKET&gt;/</code>, then <code>./data-push.sh --go</code>.</li>
+<li><strong>Human gate:</strong> you (or your lead) push / open the PR / deploy — do not let the agent do irreversible outward actions unless you explicitly ask in that session.</li>
+<li><strong>Session continuity:</strong> at the end of a day, rewrite the rolling entry-point note (what is in flight + expensive caveats) so the <em>next</em> Cursor chat is not blind.</li>
+</ol>
+<p>Branches: <code>fix/sst-1234-short-description</code>, based on <code>development</code>, squash-merged.</p>
+<hr/>
+<h3>8. A habit worth borrowing</h3>
+<p><strong>Before you believe a check, prove it can fail.</strong> Run it against a case whose answer you already know. Filters, locks and scanners whose correct answer is <em>silence</em> look identical when broken. Canary the instrument first.</p>
+<p>Full playbook: sibling Confluence pages under this parent (Diagnose → Verify → Context → Human gate).</p>
+<hr/>
+<h3>9. Where to read next</h3>
+<table><thead><tr><th>You want</th><th>Read</th></tr></thead><tbody><tr><td>Cursor orientation (always-on)</td><td><code>AGENTS.md</code> + <code>.cursor/rules/</code> in the repo (loads when you open the folder)</td></tr><tr><td>Shared-record mechanics</td><td>Confluence: <strong>Shared record (S3 sync)</strong> + your <code>ils-s3-sync-YYYYMMDD.zip</code></td></tr><tr><td>Methodology playbook</td><td>Confluence siblings: Diagnose, Verify, Context, Human gate</td></tr><tr><td>Why code looks the way it does</td><td><code>data/changes/&lt;TICKET&gt;/&lt;TICKET&gt;.md</code> (after first pull)</td></tr><tr><td>Current in-flight state</td><td><code>data/changes/STATUS.md</code></td></tr><tr><td>What we have told clients</td><td><code>data/changes/CUSTOMER_GUIDANCE.md</code></td></tr></tbody></table>
+<hr/>
+<h3>10. Ask about these — known-unsettled</h3>
+<ul>
+<li>Whether commits reach <code>stage/&lt;release&gt;</code> per ticket or in batches</li>
+<li>What counts as &quot;one provision&quot; — open with Legal</li>
+<li>Anything in <code>data/changes/_PENDING_&lt;date&gt;.md</code></li>
+</ul>
+<p>Nobody expects you to resolve these. Knowing they are open stops you assuming there is a rule you failed to find.</p>
+</body></html>

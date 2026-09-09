@@ -1,0 +1,97 @@
+<h2>Onboarder checklist (Cursor) — your side, not theirs</h2>
+<p><strong>Current as of 2026-09-09.</strong> Brings a new team member online as a <strong>contributor</strong>. They start in <strong>Cursor</strong> (Confluence joiner page + open the lambda repo). Hand them <strong>For new joiners (Cursor)</strong> and <strong><code>ils-s3-sync-YYYYMMDD.zip</code></strong> together.</p>
+<p>Also read <strong>Shared record (S3 sync)</strong> if you have not — this checklist assumes it.</p>
+<hr/>
+<h3>⛔ Step 0 — the gate, and it is not yours</h3>
+<p><strong>Nothing below works until they hold the AWS access.</strong></p>
+<ul>
+<li>Request text as sent: package file <code>_teammate_access_request.txt</code></li>
+<li>Rationale: <code>_entitlement_audit_20260904.md</code> (in the s3-sync zip)</li>
+</ul>
+<p>What was asked for, on account <strong>055622654641</strong> (nonprod):</p>
+<table><thead><tr><th>Permission set</th><th>Why</th></tr></thead><tbody><tr><td><code>DeveloperNonprod</code></td><td>reads the bucket; logs / lambda / sqs / eks / ecr for normal work</td></tr><tr><td><code>KnowledgeBaseS3</code></td><td>⚠️ <strong>the only role that can write <code>s3://ils-nonprod-knowledge-base</code></strong></td></tr></tbody></table>
+<p>Do <strong>not</strong> hand DevOps <code>poc-iam-policy.json</code> — access is SSO permission sets now.</p>
+<p><strong>Chase this before doing anything else.</strong></p>
+<hr/>
+<h3>Step 1 — Cursor from day one (say this out loud)</h3>
+<ol>
+<li>They install <strong>Cursor</strong> and open <strong><code>document-parser-lambda</code></strong> as the workspace (so <code>AGENTS.md</code> + <code>.cursor/rules</code> + skills load).</li>
+<li>You give them Confluence <strong>For new joiners</strong> <strong>and</strong> <code>ils-s3-sync-YYYYMMDD.zip</code> in the same breath — zip is required for sync scripts, not an optional extra.</li>
+<li>Machine role: <code>IDENTITY.md</code> via <code>AGENTS.md</code> — contributor never publishes the KG.</li>
+<li>Human gate: agent does not push / open-merge PRs / deploy unless they explicitly ask in that session.</li>
+<li>KG query = Cursor <strong><code>kg</code> skill</strong> / <code>scripts/kg_query.ps1</code>.</li>
+</ol>
+<blockquote><p>⚠️⚠️ <strong><code>KnowledgeBaseS3</code> does not distinguish <code>knowledge-graph/</code> from <code>changes/</code>.</strong> A contributor <em>can</em> overwrite the KG. Single-writer is <strong>baton + convention</strong>, not IAM. Say this out loud.</p></blockquote>
+<hr/>
+<h3>Step 2 — decide write posture before they configure</h3>
+<table><thead><tr><th>Posture</th><th><code>config.env</code></th><th>They can</th></tr></thead><tbody><tr><td><strong>Read-only start</strong> (recommended day 1)</td><td><code>READ_PROFILE=&quot;dev-nonprod&quot;</code></td><td>pull, ledger check, read baton — never write</td></tr><tr><td><strong>Full contributor</strong></td><td><code>PROFILE=&quot;kb-s3&quot;</code></td><td>above + push their own ticket folders</td></tr></tbody></table>
+<hr/>
+<h3>Step 3 — their setup, per machine</h3>
+<ol>
+<li><strong>AWS SSO</strong> — start URL <code>https://ils-provision.awsapps.com/start/</code>, sso-region <code>us-east-1</code>. <code>aws sts get-caller-identity</code> must show <strong>055622654641</strong>.</li>
+<li><strong>Tooling</strong> — AWS CLI v2 + mountpoint-s3 (from the package <code>mount-s3.deb</code> on x86_64 Ubuntu/WSL).</li>
+<li><strong>Copy <code>s3-sync/</code></strong>, edit <code>config.env</code>:</li>
+</ol>
+<table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td><code>LOCAL_DATA</code></td><td>absolute path to <strong>their</strong> <code>document-parser-lambda/data</code></td></tr><tr><td><code>MACHINE_NAME</code></td><td>distinctive — appears in baton / refresh queue</td></tr><tr><td><code>MACHINE_ROLE</code></td><td>⚠️ <strong><code>contributor</code></strong></td></tr><tr><td><code>PROFILE</code> / <code>READ_PROFILE</code></td><td>per Step 2</td></tr></tbody></table>
+<ol>
+<li><strong><code>./identity.sh --write</code></strong> → confirm <strong>CONTRIBUTOR</strong>. This is what a <strong>Cursor</strong> session must read (via <code>AGENTS.md</code>) so it does not publish the KG.</li>
+<li><strong><code>./validate.sh</code></strong> → <code>MACHINE READY ✅</code> (read-only denial is OK when expected).</li>
+<li><strong>First pull:</strong> <code>./data-pull.sh</code> then <code>./data-pull.sh --go</code> (~888 MiB).</li>
+</ol>
+<hr/>
+<h3>Step 4 — teach the five rules (10 minutes)</h3>
+<ol>
+<li>⚠️⚠️ Recovery expires at <strong>30 days</strong> — own your own work; pull / push / speak up.</li>
+<li>Write via sync, read via mount (<code>~/s3-ils-data</code> read-only on purpose).</li>
+<li>Pull at start → work locally → push at end. One owner per ticket folder.</li>
+<li>Never <code>--delete</code> (publisher-only).</li>
+<li>Never push <code>knowledge-graph/</code> / never publish KG; file <code>kg_refresh.sh request</code> instead.</li>
+</ol>
+<p><strong>Append-only ledgers</strong> — add rows only; <code>ledger_check.sh</code> warns on pull.</p>
+<hr/>
+<h3>Step 5 — prove the round trip (acceptance test)</h3>
+<blockquote><p>▶▶ <strong>Two-machine § of <code>GO_LIVE_CHECKLIST</code> may never have been run.</strong> A second person joining <strong>is</strong> the acceptance test — treat it as one and record the result.</p></blockquote>
+<p>On their machine:</p>
+<ul>
+<li>[ ] <code>./identity.sh</code> → <strong>CONTRIBUTOR</strong></li>
+<li>[ ] <code>./data-pull.sh --go</code> completes</li>
+<li>[ ] <code>python3 &lt;their data&gt;/knowledge-graph/kg_labels.py check</code> → <strong>0 unnamed, 0 lost</strong>, no fingerprint mismatch (graph + labels arrived as a <strong>matched pair</strong>)</li>
+<li>[ ] In <strong>Cursor</strong>, KG query for a known ticket returns a community <strong>name</strong>, not a bare integer (proves hand-authored labels survived)</li>
+</ul>
+<p>Contributor loop:</p>
+<ul>
+<li>[ ] They create <code>changes/sst-SANDBOX/notes.md</code> → <code>./data-push.sh --go</code></li>
+<li>[ ] You pull on publisher and see it</li>
+<li>[ ] They <code>kg_refresh.sh request &quot;smoke test&quot;</code> → push; you see queue with <strong>their</strong> machine name</li>
+<li>[ ] Clear queue → both sides empty</li>
+<li>[ ] They delete sandbox and push — <code>--delete</code> stays with publisher</li>
+</ul>
+<hr/>
+<h3>Step 6 — methodology adoption (Cursor)</h3>
+<ul>
+<li>[ ] They know where the Confluence playbook lives (parent + Diagnose / Verify / Context / Human gate)</li>
+<li>[ ] They can open Plan mode and state the output contract (<code>get-sl-upload-status</code>)</li>
+<li>[ ] They know: canary instruments; assert on member lists not totals; human gate</li>
+<li>[ ] <code>sanitise-diff</code> skill (or equivalent) before code leaves the workbench</li>
+<li>[ ] Session continuity: rolling entry-point rewritten at end of day</li>
+</ul>
+<hr/>
+<h3>Known sharp edges — tell them before they hit these</h3>
+<ul>
+<li>Never diagnose access from a CLI error without re-login first.</li>
+<li>A check that cannot distinguish &quot;no&quot; from &quot;couldn&#x27;t ask&quot; is not evidence.</li>
+<li>A clean dry-run only says &quot;what I was asked to send, I sent&quot;.</li>
+<li><code>aws s3 --include</code> is case-sensitive.</li>
+<li>Sync walks the whole tree before filters — use <code>SYNC_ROOTS</code>, not raw <code>data/</code>.</li>
+</ul>
+<hr/>
+<h3>Confirm they are productive</h3>
+<ul>
+<li>[ ] <code>./validate.sh</code> → READY on each of their machines</li>
+<li>[ ] They can pull and see tickets + KG</li>
+<li>[ ] Round trip proven (Step 5)</li>
+<li>[ ] KG query works in <strong>Cursor</strong></li>
+<li>[ ] They know 30-day rule, append-only ledgers, <code>--delete</code> is not theirs</li>
+<li>[ ] They use <strong>Cursor</strong> from day one (repo open; <code>AGENTS.md</code> loads)</li>
+<li>[ ] They received <strong><code>ils-s3-sync-YYYYMMDD.zip</code></strong> with the Confluence joiner page</li>
+</ul>

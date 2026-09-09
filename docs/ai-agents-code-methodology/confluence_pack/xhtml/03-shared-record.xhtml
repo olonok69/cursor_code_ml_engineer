@@ -1,0 +1,97 @@
+<h2>Shared record (S3 sync) — Cursor</h2>
+<p><strong>Current as of 2026-09-09.</strong> Entry point for sharing <code>document-parser-lambda</code>&#x27;s <strong>gitignored <code>data/</code></strong> — ticket documentation, the ticket knowledge graph, diagnostics, and client source documents — across machines and teammates over S3.</p>
+<p>Your machine&#x27;s <code>data/</code> is a <strong>working copy</strong>. The bucket is the source of truth.</p>
+<p><strong>Agents:</strong> company standard is <strong>Cursor</strong>. Open the repo so <code>AGENTS.md</code> / <code>.cursor/rules</code> load; they point at machine-local <code>IDENTITY.md</code>.</p>
+<p>New joiners: start at <strong>For new joiners (Cursor)</strong> (Confluence) <strong>and</strong> unzip <code>ils-s3-sync-YYYYMMDD.zip</code> — same onboarding path. Onboarders: <strong>Onboarder checklist</strong>.</p>
+<hr/>
+<h3>Where things stand</h3>
+<table><thead><tr><th></th><th></th></tr></thead><tbody><tr><td>Bucket</td><td><code>s3://ils-nonprod-knowledge-base</code> (eu-central-1)</td></tr><tr><td>Prefix</td><td><code>document-parser-lambda/data</code></td></tr><tr><td>Contents</td><td>KG, ticket markdown, diagnostics, client binaries</td></tr><tr><td>Size at last measure</td><td>~4,675 objects · ~888 MiB (2026-09-04)</td></tr><tr><td>Versioning</td><td>enabled — <strong>noncurrent versions expire at 30 days</strong></td></tr></tbody></table>
+<ac:structured-macro ac:name="code"><ac:parameter ac:name="language">text</ac:parameter><ac:plain-text-body><![CDATA[                    ┌────────────────────────────────────┐
+                    │  s3://ils-nonprod-knowledge-base   │
+                    │  prefix: document-parser-lambda/   │
+                    │          data                      │
+                    │   versioning ON — 30-day recovery  │
+                    └────────────────────────────────────┘
+        push ▲  ▲ pull          pull ▲            (read-only)
+             │  │                    │             mount ⤵
+   ┌─────────┴──┴─────┐   ┌──────────┴───────┐  ┌──────────────────┐
+   │ PUBLISHER        │   │ CONTRIBUTORS     │  │ ~/s3-ils-data    │
+   │ one machine      │   │ everyone else    │  │ read-only browse │
+   │ holds the baton  │   │ own ticket dirs  │  └──────────────────┘
+   │ owns the KG      │   │ never push KG    │
+   └──────────────────┘   └──────────────────┘
+
+  WRITE = aws s3 sync   (data-push / data-pull)  — real local disk
+  READ  = mountpoint-s3 (mount-data)             — live, read-only]]></ac:plain-text-body></ac:structured-macro>
+<hr/>
+<h3>⚠️⚠️ Recovery expires</h3>
+<p>An overwrite is recoverable <strong>for 30 days, and only if somebody notices.</strong> Nobody audits your rows. Pull before you edit. Push what you changed. If something of yours disappears, say so within the month or it is gone.</p>
+<hr/>
+<h3>Structural rules</h3>
+<ol>
+<li><strong>WRITE via sync, READ via mount.</strong> Mount is read-only on purpose — no locking, no atomic rename on object storage.</li>
+<li><strong>Docs are the source of truth; the KG is derived — and single-writer.</strong> <code>knowledge-graph/community_labels.json</code> is hand-authored names that <em>nothing</em> regenerates. One machine publishes the KG and claims a baton first.</li>
+<li><strong>&quot;Derived&quot; is per file, not per folder.</strong> Classify: source / derived / authored-inside-derived. The third must travel; never clobber it with a rebuild.</li>
+<li><strong>Pairs must move together.</strong> Stamp the names overlay with a fingerprint of the graph; health check must fail on mismatch.</li>
+</ol>
+<hr/>
+<h3>Roles</h3>
+<table><thead><tr><th>Role</th><th>Who</th><th>Does</th></tr></thead><tbody><tr><td><strong>Publisher</strong></td><td>one machine at a time (currently named in live ops docs)</td><td>rebuilds/publishes KG; only role that may <code>--delete</code></td></tr><tr><td><strong>Contributor</strong></td><td>every other machine / teammate</td><td>owns <code>changes/sst-NNNN/</code>; pushes docs; <strong>reads</strong> KG</td></tr></tbody></table>
+<ac:structured-macro ac:name="code"><ac:parameter ac:name="language">bash</ac:parameter><ac:plain-text-body><![CDATA[./publisher.sh status | claim "why" | release]]></ac:plain-text-body></ac:structured-macro>
+<blockquote><p>⚠️ Two publishers destroy <code>community_labels.json</code> silently. Returning machines: set <code>MACHINE_ROLE=&quot;contributor&quot;</code> and <code>./identity.sh --write</code> <strong>before</strong> pull/push.</p></blockquote>
+<p><strong>Contributor asks for rebuild (no locks):</strong></p>
+<ac:structured-macro ac:name="code"><ac:parameter ac:name="language">bash</ac:parameter><ac:plain-text-body><![CDATA[kg_refresh.sh request "why"
+./data-push.sh --go]]></ac:plain-text-body></ac:structured-macro>
+<p>One file per request under <code>refresh_queue/</code>. Cursor: ask the agent to file the request; do <strong>not</strong> ask it to publish the KG on a contributor machine.</p>
+<hr/>
+<h3>Access</h3>
+<table><thead><tr><th>Profile</th><th>Account</th><th>Permission set</th><th>Here</th></tr></thead><tbody><tr><td><code>kb-s3</code></td><td>055622654641</td><td><code>KnowledgeBaseS3</code></td><td>⚠️ <strong>only</strong> role that can WRITE this bucket</td></tr><tr><td><code>dev-nonprod</code></td><td>055622654641</td><td><code>DeveloperNonprod</code></td><td>reads; PutObject denied by design</td></tr><tr><td><code>shared-ecr</code></td><td>901059153226</td><td><code>SharedEcrPull</code></td><td>ECR fallback — not needed for sync</td></tr></tbody></table>
+<p>Read-only teammate: <code>READ_PROFILE=&quot;dev-nonprod&quot;</code> in <code>config.env</code>.</p>
+<blockquote><p>Never diagnose access from a CLI error without <code>aws sso logout &amp;&amp; aws sso login</code> first.</p></blockquote>
+<hr/>
+<h3>Machine identity (Cursor)</h3>
+<ac:structured-macro ac:name="code"><ac:parameter ac:name="language">bash</ac:parameter><ac:plain-text-body><![CDATA[./identity.sh --write    # generates machine-local IDENTITY.md]]></ac:plain-text-body></ac:structured-macro>
+<p><code>IDENTITY.md</code> records role + live checks (account, bucket, mount). Repository <strong><code>AGENTS.md</code></strong> (and/or always-on <code>.cursor/rules</code>) <strong>points at it</strong> so every Cursor session reads its role before shared writes. Gitignored, never synced, never zipped.</p>
+<p>Re-run after any <code>config.env</code> change.</p>
+<hr/>
+<h3>Daily use</h3>
+<ac:structured-macro ac:name="code"><ac:parameter ac:name="language">bash</ac:parameter><ac:plain-text-body><![CDATA[./data-pull.sh                # dry run DEFAULT
+./data-pull.sh --go
+
+# ... work locally in Cursor on real disk under data/changes/...
+
+./data-push.sh
+./data-push.sh --go]]></ac:plain-text-body></ac:structured-macro>
+<p><code>--delete</code> is <strong>publisher-only</strong>. <code>data-pull.sh</code> runs <code>ledger_check.sh</code> first (advisory).</p>
+<p><strong>KG query (Cursor):</strong> project <strong><code>kg</code> skill</strong> / Agent, or <code>.\scripts\kg_query.ps1</code> / <code>kg_query.sh</code>.</p>
+<p>Contributors never run KG publish / rebuild.</p>
+<hr/>
+<h3>Behavioural rules people break</h3>
+<ol>
+<li>⚠️⚠️ <strong>Recovery expires</strong> — see above.</li>
+<li><strong>Shared ledgers are append-only</strong> — <code>STATUS.md</code>, <code>TICKETS.md</code>, <code>FOLLOWUPS.md</code>, <code>TEST_MAP.md</code>, <code>CUSTOMER_GUIDANCE.md</code>. Add rows; never rewrite someone else&#x27;s.</li>
+<li><strong>Per-task folders need no coordination</strong> — one folder per ticket, one owner.</li>
+<li><strong>The shared store wins on divergence</strong> — &quot;I have it locally&quot; is not an argument once theirs is published.</li>
+<li><strong>Mirror-delete belongs to one role</strong> — publisher only.</li>
+<li><strong>Widening scope is a security event</strong> — scan first, <strong>canary the scanner</strong>, then reconcile inventory (clean transfer ≠ completeness).</li>
+</ol>
+<hr/>
+<h3>Setting up a machine</h3>
+<ol>
+<li>AWS SSO → account <strong>055622654641</strong>.</li>
+<li><code>sudo apt-get install -y ./mount-s3.deb</code> (x86_64; WSL/Ubuntu).</li>
+<li>Edit <code>config.env</code>: <code>LOCAL_DATA</code>, <code>MACHINE_NAME</code>, <code>MACHINE_ROLE</code>, optional <code>READ_PROFILE</code>. Leave <code>BUCKET</code> / <code>PREFIX</code> / <code>REGION</code> alone.</li>
+<li><code>./identity.sh --write</code></li>
+<li><code>./validate.sh</code> → <strong>MACHINE READY ✅</strong></li>
+</ol>
+<p>Scripts live in the distributable zip (<code>ils-s3-sync-YYYYMMDD.zip</code>). After unzip: edit config, then identity + validate.</p>
+<hr/>
+<h3>Troubleshooting (short)</h3>
+<table><thead><tr><th>Symptom</th><th>Fix</th></tr></thead><tbody><tr><td>Token expired / ForbiddenException</td><td>Re-login SSO first; then re-read the error</td></tr><tr><td>AccessDenied on PutObject</td><td>On <code>dev-nonprod</code> by design — need <code>kb-s3</code> to write</td></tr><tr><td>Mount empty / transport endpoint</td><td>Wrong <code>PREFIX</code>, or <code>./unmount-data.sh</code> then remount</td></tr><tr><td>Write fails on mount</td><td>By design — write via <code>data-push.sh</code></td></tr><tr><td>Teammate work vanished after your push</td><td>You used <code>--delete</code> from stale view — restore within 30 days</td></tr><tr><td><code>kg_labels.py check</code> lost/unnamed</td><td>Graph + labels unpaired — re-pull both; do not publish over it</td></tr></tbody></table>
+<hr/>
+<h3>Known gaps</h3>
+<ul>
+<li>Two-machine live round-trip may still be unproven until the next joiner completes the onboarder acceptance test — record the result.</li>
+<li>Never trust a filter you have not seen reject something.</li>
+<li>A clean dry-run is not a completeness check.</li>
+</ul>
