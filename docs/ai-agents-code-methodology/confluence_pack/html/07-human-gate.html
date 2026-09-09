@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>Cursor — AI methodology — Human gate, continuity, review, checklist</title><style>
+body{font:15px/1.62 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#172b4d;max-width:60em;margin:2rem auto;padding:0 1.5rem}
+h1{font-size:1.9em;border-bottom:3px solid #0052cc;padding-bottom:.3em}
+h2{font-size:1.4em;margin-top:2em;color:#0747a6}h3{font-size:1.15em;margin-top:1.6em}
+code{background:#f4f5f7;border-radius:3px;padding:.1em .35em;font-family:SFMono-Regular,Consolas,monospace;font-size:.88em}
+pre.code{background:#f4f5f7;border:1px solid #dfe1e6;border-radius:4px;padding:.9em;overflow-x:auto}
+pre.code code{background:none;padding:0}
+table{border-collapse:collapse;width:100%;margin:1.1em 0}
+th,td{border:1px solid #dfe1e6;padding:.55em .7em;text-align:left;vertical-align:top}
+th{background:#f4f5f7}
+blockquote{border-left:4px solid #ffab00;background:#fffae6;margin:1.1em 0;padding:.7em 1em}
+blockquote p:first-child{margin-top:0}blockquote p:last-child{margin-bottom:0}
+hr{border:0;border-top:1px solid #dfe1e6;margin:2em 0}
+.nav{font-size:.9em;background:#f4f5f7;padding:.6em .9em;border-radius:4px;margin-bottom:1.5em}
+</style></head><body>
+<h1>Cursor — AI methodology — Human gate, continuity, review, checklist</h1>
+<div class="nav"><a href="00-index.html">Index</a> · <a href="01-for-new-joiners.html">For new joiners (Cursor)</a> · <a href="02-onboarder.html">Onboarder checklist (Cursor)</a> · <a href="03-shared-record.html">Shared record (S3 sync)</a> · <a href="04-diagnose.html">Diagnose before you spend</a> · <a href="05-verify.html">Verify: the layered test battery</a> · <a href="06-context.html">Context architecture</a> · <strong>Human gate, continuity, review, checklist</strong></div>
+<h3>8. Handoff — artifacts, sanitisation, human gate (Cursor)</h3>
+<p><strong>One tool.</strong> This playbook assumes the company coding agent is <strong>Cursor</strong> end to end. There is no formal handoff <em>from another agent product</em> into Cursor — the human keeps the same role; only the session and the outward gates change.</p>
+<p>&quot;Handoff&quot; here therefore means two things, both inside Cursor:</p>
+<ol>
+<li><strong>Session continuity</strong> — rewrite the rolling entry-point from §6 so the <em>next</em> Cursor chat (or the next day) does not re-derive caveats from a dead transcript.</li>
+<li><strong>Human gate on outward actions</strong> — the agent prepares; a human (or human-driven automation) takes every irreversible / external step.</li>
+</ol>
+<p>Concretely:</p>
+<ul>
+<li><strong>Artifacts per change:</strong> a writeup (root cause → fix → verification evidence), an update to the live status ledger, acceptance criteria framed for the sign-off reviewer, and a short <strong>next-actions</strong> note that states exactly what the human must do to ship (push, open/merge the change request, deploy, message stakeholders). That note is <em>not</em> a tool-migration checklist.</li>
+<li><strong>Sanitisation gate (mechanical, every time):</strong> before anything leaves the workbench, scan the <strong>staged change</strong> for content that must not enter the permanent record — customer/partner identifiers, internal ticket IDs in code bodies, secrets, and agent self-attribution. Make it a pattern scan, not a judgement call. Watch the scan&#x27;s own footguns: a naive diff scan matches <em>removed</em> lines too, so filter to <strong>added</strong> lines only, and exclude paths that are intentionally local/ignored. The one time you eyeball it instead of running the scan is the time something leaks. In Cursor, prefer the project <strong><code>sanitise-diff</code> skill</strong> over ad-hoc judgement.</li>
+<li><strong>Role separation:</strong> the Cursor agent authors the change and leaves the branch; it does <strong>not</strong> push, open/merge change requests, deploy, or message anyone unless the human <strong>explicitly</strong> asks in that session. Enforce with always-on rules + hooks (<code>.cursor/rules</code>, <code>.cursor/hooks.json</code>) and keep shipped artifacts reading as the human author&#x27;s work (no agent attribution in code, commit messages, or change-request text).</li>
+<li><strong>Machine role before shared writes:</strong> if the trail is on shared object storage, read machine-local <code>IDENTITY.md</code> first (<code>AGENTS.md</code> points at it) — a contributor session must not republish the derived index.</li>
+</ul>
+<h3>9. Automated review is part of the loop</h3>
+<p>When a review bot comments on the open change, treat its findings as first-class:</p>
+<ul>
+<li><strong>Triage each one</strong> like a human reviewer&#x27;s: confirm the real defects, prepare a <strong>follow-up change</strong> for them, and dismiss false positives <strong>with a stated reason</strong> — never silently.</li>
+<li><strong>Don&#x27;t merge over an unaddressed valid finding.</strong> A machine-flagged defect is still a defect. The follow-up commit closes the loop before the change lands; the dismissal-with-reason is itself part of the durable record.</li>
+</ul>
+<p>A common real example of the value: a fix that introduces a <em>new</em> ordering or positional assumption (e.g. &quot;this check now only fires at the start of a string&quot;) can pass every hand-written test yet still have a gap the bot spots by reasoning about the changed control flow. Triage, reproduce, add the missing regression test, fix, re-verify.</p>
+<p>Two things worth knowing before you answer a bot:</p>
+<ul>
+<li><strong>Reproduce before you agree, and before you push back.</strong> Both directions are failure modes. Performative agreement produces a needless &quot;fix&quot; to code that was correct; reflexive dismissal merges a real defect. Measure the blast radius either way — a valid finding is frequently <strong>latent rather than inert</strong> (the flawed logic is reached on a minority of inputs and currently produces no wrong output), and &quot;latent&quot; changes the urgency but not the verdict.</li>
+<li><strong>Measuring a finding can invalidate the obvious fix.</strong> More than once, the investigation into a correctly-identified fault has surfaced a <em>second</em> fault in the opposite direction at the same site — one making the check too narrow, the other too broad — where the naive one-line correction fixes the reported half and makes the unreported half worse. Measure first, then design; the bot&#x27;s description of the problem is a lead, not a specification.</li>
+</ul>
+<p>The same discipline applies to a human reviewer&#x27;s comments, and to a QA report: treat the finding as <strong>data</strong>, never as a fix specification.</p>
+<hr/>
+<h3>Per-task checklist (the loop, compressed)</h3>
+<pre class="code"><code>[ ] Orient: query the record index for related prior work, read those records in full, AND check the live state (branch / open work)
+[ ] Inbound gate: symptom reproduced at the OUTPUT CONTRACT (the LAST writer of the field)? if not → push back
+[ ] Expectation: where does the &quot;expected&quot; value come from? derive it from structure + contract, not from another environment
+[ ] Contract rule: comply / revise / record — pick one explicitly; silence is not an option
+[ ] Provenance: regression or pre-existing? prove it on the pre-change baseline
+[ ] Premise: every stated fact about machine / environment / access verified against the AUTHORITATIVE source, not an error message
+[ ] Root cause: confirmed with a FREE DETERMINISTIC oracle (no paid run yet)
+[ ] Handlers: named the exception handlers sitting between you and the symptom; fixed, or accepted IN WRITING
+[ ] Instrument: probe canaried on a KNOWN-ANSWER case; no try/except wrapping the measurement
+[ ] Plan: options + trade-offs presented; human agreed; rejected options recorded
+[ ] Implement: scoped test RED for the right reason → minimal code → GREEN
+[ ] Generic: keyed on a structural class; sibling inputs covered; no-op proof on the reference set
+[ ] Verify: unit + scoped + full regression green; non-determinism = fix the sensitivity, not the variance
+[ ] Composition: assert on the MEMBER LIST, not the count; delta vs baseline where the fix has a direction
+[ ] Gate honesty: state what each gate can and CANNOT show; name what carries the evidence if a gate can&#x27;t fail
+[ ] Discrimination: name the check that separates the fix you chose from the weaker candidate — &quot;the suite&quot; is usually not it
+[ ] Premise vs implementation: if the change can only REMOVE or ALTER output, run it against known-correct real data — your own tests cannot disagree with your own model
+[ ] Outbound gate: fixed contract reproduced on the live path; symptom gone
+[ ] Deployed artifact: reproduction re-run INSIDE the shipping artifact; PROVEN to fail on unfixed source first; output identical to local
+[ ] Look at it: render/inspect the actual output by eye — before/after artifacts for anything visual
+[ ] Document: writeup + ledger update + acceptance criteria + next-actions note (each written ONCE)
+[ ] Sanitise: scan ADDED lines of the staged change for names / IDs / secrets / attribution
+[ ] Human gate: human pushes / opens the change request / deploys — Cursor agent does not (unless explicitly asked)
+[ ] Automated review: reproduce, measure blast radius, then follow-up commit or dismiss-with-reason
+[ ] Persist: update registries + lean memory; sync the shared trail; codify any reusable lesson into the playbook
+[ ] Continuity: rewrite the single rolling entry-point doc — what is in flight, and the caveats that would be re-derived expensively (next Cursor session)</code></pre>
+<hr/>
+<h3>Technical anti-patterns</h3>
+<ul>
+<li><strong>Diagnosing with the expensive generator.</strong> It&#x27;s metered and non-deterministic; use the free oracle to diagnose, the generator only to verify the finished fix.</li>
+<li><strong>Proving a fix at the wrong layer.</strong> Internal unit green ≠ contract green. The consumer reads the contract; prove the contract.</li>
+<li><strong>Treating a single green run as a pass</strong> on a non-deterministic system. Pin the sensitivity, not the seed.</li>
+<li><strong>Instance-fix masquerading as class-fix.</strong> If the patch references the one reported value rather than the structural property, it will fix the demo and break the next input.</li>
+<li><strong>Letting the always-loaded context grow into a changelog.</strong> Every line there is paid for on every turn. Detail goes to on-demand files; the core stays a map.</li>
+<li><strong>Skipping the sanitisation scan because &quot;this one&#x27;s obviously clean.&quot;</strong> Run it every time; the exceptions are exactly where leaks happen.</li>
+<li><strong>Merging over a bot finding</strong> because it &quot;looks like a false positive&quot; without reproducing it. Reproduce, then dismiss-with-reason or fix.</li>
+<li><strong>Trusting an un-canaried instrument.</strong> A diagnostic that has never produced a known-correct answer is not evidence, however confident its output looks — and a uniform result across every input is a symptom, not a finding.</li>
+<li><strong>Asserting on the total.</strong> The count matching the expectation is the single most common way a missing item ships. Assert on the members.</li>
+<li><strong>Reading a structural gate as a semantic one.</strong> A check that every item is present, unique and correctly wired says nothing about whether any of it is <em>right</em>. A migration reported a clean bill of health — every group matched, none lost, no orphans — while <strong>56% of the carried-over names did not describe the thing they were attached to</strong>, because the fallback had matched on a shallow proxy. A wrong label is worse than a missing one: a missing one asks a question, a wrong one answers it incorrectly and sends the next person to the wrong place. When a value&#x27;s correctness is a matter of <em>meaning</em>, no automated check retires it — schedule the human read and say so in the gate&#x27;s description.</li>
+<li><strong>Believing a green canary that never applied the real perturbation.</strong> See §2 rule 3: &quot;the test I could build passed&quot; is not &quot;the risk is retired&quot;.</li>
+<li><strong>Reporting a gate that cannot fail as validation.</strong> If the reference set holds no example of the shape you changed, a clean run proves no-regression and nothing else. Say which is which.</li>
+<li><strong>Proving it locally and calling it shipped.</strong> The artifact that runs in the target environment is the deliverable; your working tree is not it.</li>
+<li><strong>Trusting a rule you have never seen reject anything.</strong> When correct behaviour is silence, a broken rule and a working one are indistinguishable. Read what it matched.</li>
+<li><strong>Letting a failed measurement return the same answer as a negative result.</strong> &quot;Nobody holds the lock&quot; and &quot;I could not find out&quot; must never print the same line.</li>
+<li><strong>Reading a green deployment pipeline as evidence the service runs.</strong> A smoke suite that exercises the public interface says nothing about a background listener that fails to start. Assert on the thing that broke, not the thing that is easy to poll.</li>
+<li><strong>Shipping code and its configuration through separate pipelines with nothing sequencing them.</strong> Each repository is individually correct and the composition is undefined; the gap between the two merges is an outage window nobody is watching. If they must be split, the code must degrade loudly when its configuration is absent — not consume it at startup and die quietly.</li>
+<li><strong>A writable shared mount.</strong> Object storage has no locking and no atomic rename. Mount read-only, write through an explicit sync.</li>
+<li><strong>Letting two machines publish the derived index.</strong> Records are the source of truth and are conflict-free in practice; the generated index is the one place two people genuinely collide. One publisher, or rebuild locally.</li>
+<li><strong>Treating a green suite as evidence that the specification is right.</strong> The tests and the defect share an ancestor: your model of the problem. When that model is what is wrong, every test agrees with the bug, and adding tests only raises confidence. Real known-correct data is the only instrument that can disagree with you.</li>
+<li><strong>A gate that cannot tell two candidate fixes apart.</strong> Distinct from a gate that cannot fail: this one passes for <em>both</em>, so the suite silently ratifies whichever fix you happened to write. Name the measurement that separates them.</li>
+<li><strong>An in-artifact check never run against unfixed source.</strong> It has not been shown to fail, so it is a screenshot, not a gate.</li>
+<li><strong>Building a procedure on an unverified premise</strong> about the machine, the environment, or the access you hold — and then diagnosing that premise from an error message rather than the authoritative source.</li>
+<li><strong>Leaving a suppressed error unrecorded.</strong> Fixing the handler and accepting it are both legitimate; silence is not, and it reads identically to not having noticed.</li>
+<li><strong>Keeping in-flight state only in the transcript</strong> — the one part of the session guaranteed not to survive it.</li>
+<li><strong>Reading a structural index gate as a coverage gate.</strong> A thinner index passes integrity checks <em>more</em> easily than a full one. Compare against the previous build&#x27;s counts.</li>
+<li><strong>Granting the shared record&#x27;s write access through a role you already hold.</strong> A permission set lands in every environment it is provisioned into; the narrow instrument is a dedicated, single-location grant.</li>
+</ul>
+<hr/>
+<p><em>Internal document. Keep it generic: no client names, no environment specifics, no secrets. It is meant to be readable by any engineer on any stack.</em></p>
+</body></html>
