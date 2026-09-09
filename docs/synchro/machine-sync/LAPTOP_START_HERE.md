@@ -118,5 +118,7 @@ trip ends:
 
 **Outbound = full copy (everything travels, `bootstrap` on arrival). Inbound = increment only (code via
 git, ticket docs + memory-snapshot via a small `data/` tarball, then `restore-memory` + `/kg-refresh` on
-main).** The graph is a *derived* artifact — it never travels back; whichever machine holds the current
-corpus rebuilds it.
+main).** The built graph does not travel back — whichever machine holds the current corpus rebuilds it.
+⚠️ **One exception, and it is not optional:** `community_labels.json` (the hand-authored community names) is
+**not** a pure function of the corpus. Nothing regenerates it, and under 1% survived a real rebuild. If you
+edited it here, it travels back, paired with the graph it was written against.

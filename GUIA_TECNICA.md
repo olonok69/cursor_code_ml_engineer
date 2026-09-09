@@ -726,14 +726,16 @@ ticket/PR; moverse degenera en empaquetarlo todo; y cada compañero acaba con **
 
 | Regla | Por qué |
 |---|---|
-| Alcance estrecho: solo `changes/**/*.md` + grafo | Confidencialidad y tamaño. **Nada** de documentos de cliente, fixtures ni binarios sin firma del dueño del bucket. |
+| Alcance **por fases**, cada una revisada | Empezó estrecho (`changes/**/*.md` + grafo) y se ensanchó en fases revisadas — **con la firma del dueño en cada salto**. Ensanchar es fácil; retraer, no. ⚠️ **Cada ampliación es un evento de seguridad**: escanea antes, y **canaria el escáner primero** (un escaneo "limpio" no cuenta hasta que el mismo escáner haya pillado un secreto plantado). Después **reconcilia**: un informe de transferencia limpio solo dice *"lo que me pediste enviar, lo envié"*, nunca *"lo que existe está"*. |
 | **Escribe por sync, lee por mount de solo lectura** | El almacenamiento de objetos no tiene locking ni rename atómico: un mount escribible corrompe y se descubre semanas después. |
 | Dry-run por defecto; `--delete` es opt-in aparte | Un espejo exacto desde una vista local vieja **borra** lo que un compañero acaba de empujar. |
 | Docs = fuente de verdad; el grafo es **derivado** | Los ficheros por ticket casi nunca chocan; el grafo generado es el único punto real de contención → lo publica **una** máquina. ⚠️ "Reconstruir en local" solo vale si el árbol es *puramente* derivado. |
 | **"Derivado" es del fichero, no de la carpeta** | Dentro del árbol generado vive un fichero **escrito a mano** (nombres curados) que no regenera nada: al reconstruir sobrevivió **menos del 1%**. Clasifica por fichero — *fuente* / *derivado* / *escrito a mano dentro del derivado* — y trata el tercero como fuente. |
 | **Los pares viajan juntos** | El overlay solo vale contra el grafo del que salió, pero el sync compara **objeto a objeto** → grafo nuevo + nombres viejos = nombres en la comunidad equivocada, **sin error**. Sella el overlay con una **huella del grafo**. |
 | **Coordinar sin locks** | Pedir rebuild: cada contribuidor escribe **su propio fichero** en `refresh_queue/<utc>-<máquina>.request` (`kg_refresh.sh request`). Claves distintas nunca colisionan. |
-| Versionado del bucket activado | Red de recuperación, antes del primer accidente y no después. |
+| ⚠️⚠️ **La recuperación CADUCA — y cada uno responde de su trabajo** | El versionado se describe siempre como "la red de seguridad", punto. Es media verdad: casi siempre lleva una regla de ciclo de vida que **expira las versiones no actuales a los 30 días**. Una sobrescritura es recuperable **30 días y solo si alguien se da cuenta**; nadie audita los ficheros de nadie. Dilo literal en el onboarding: *baja antes de editar, sube lo que cambiaste, y si desaparece algo tuyo, dilo dentro del mes o se ha ido.* |
+| **Los ledgers compartidos son de solo-append** | `STATUS.md`, `FOLLOWUPS.md`… Last-writer-wins sin merge: **reescribir uno borra en silencio la línea de otra persona**, sin conflicto ni error. Añade filas, no reestructures las ajenas. Detectarlo es barato: una línea presente en local y ausente en la copia entrante es borrado deliberado o pisotón → un aviso en el `pull` casi no tiene falsos positivos. Es la **visibilidad** que el versionado no da: hace la pérdida *recuperable*, no *advertida*. |
+| **En divergencia manda el almacén compartido** | *"Yo lo tengo en local"* deja de ser argumento en cuanto la versión de otro es la publicada. Acuérdalo **antes**: el instinto va al revés, porque tu copia es la que ves. |
 
 **Lo específico de agentes — la máquina tiene rol.** En cuanto el mismo registro es
 alcanzable desde varias máquinas con permisos distintos, la sesión debe saber **dónde está y

@@ -669,6 +669,15 @@ from a ticket or a PR; moving degenerates into archiving everything; and each pe
 - **Coordinate without locks.** Contributors request a rebuild via a one-file-per-request queue
   (`kg_refresh.sh request` → `refresh_queue/<utc>-<machine>.request`). Single publisher is scaffolding,
   not architecture — the queue is the trigger contract a scheduled job can consume later.
+- ⚠️⚠️ **Recovery expires.** Versioning almost always **expires noncurrent versions after 30 days**.
+  Recoverable **for 30 days, and only if somebody notices**. Onboarding literal: *pull before you
+  edit, push what you changed, and if something of yours disappears, say so within the month or it
+  is gone.*
+- **Shared ledgers are append-only.** Last-writer-wins with no merge: rewriting one silently drops
+  somebody else's line. Add rows; never restructure someone else's. A pull-time warning gives the
+  **visibility** versioning does not.
+- **The shared store wins on divergence.** *"I have it locally"* stops being an argument once
+  someone else's version is the published one. Agree it **in advance**.
 - **The agent-specific part — the machine has a role.** This only shows up once the same record is
   reachable from several machines with different permissions, and it's the easiest thing to forget:
   the session has to know **where it is and what it may do** *before* acting. Otherwise a *contributor*

@@ -18,7 +18,7 @@ alwaysApply: true
 
 ## Outbound gate (before “done”) — five checks
 
-1. **Canary the instrument** on a known-answer case before trusting any diagnostic that informs ship.
+1. **Canary the instrument** on a known-answer case before trusting any diagnostic that informs ship — filters, locks, and scanners whose correct answer is silence must show a reject / fail path first; a negative result and a failed measurement must not share an output.
 2. Reproduce fixed contract on the real output path (wrapper/entrypoint the consumer sees — last writer).
 3. Symptom gone; assert on the **member list**, never on a total alone.
 4. Runtime parity inside the **shipping artifact** when applicable (deployed image / equivalent).
@@ -30,13 +30,13 @@ Also watch for: a **canary that never applied the real perturbation** (instrumen
 
 ## Document + sanitise
 
-1. Write-once: issue note, STATUS update, QA acceptance, handover.
+1. Write-once / append-only on shared ledgers: issue note, STATUS update, QA acceptance, next-actions note — add rows; do not rewrite someone else's.
 2. Run **`sanitise-diff` skill** on **added** staged lines (names, ticket IDs in code, secrets, agent self-attribution).
 
 ## Review loop
 
 Triage automated reviewer findings like a human’s: fix, follow-up commit, or dismiss **with a stated reason**. Do not merge over unaddressed valid findings.
 
-## Handoff
+## Human gate (not tool-to-tool handoff)
 
-Prepare the branch and handover note. Stop at the human gate unless explicitly asked to push/PR/deploy.
+Company standard is **Cursor only**. Prepare the branch and next-actions note. Stop at the human gate unless explicitly asked to push/PR/deploy. Session continuity = rewrite the rolling entry-point for the *next* Cursor context.
