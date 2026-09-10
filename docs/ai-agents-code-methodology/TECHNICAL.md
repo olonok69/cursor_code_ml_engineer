@@ -508,6 +508,53 @@ contributors do.
 > rebuild can move to a scheduled or event-driven job later — the migration then
 > changes *who runs it*, not the interface anyone uses.
 
+**A role that exists only in documentation is untested code.** The pattern above
+is sound and we still shipped it broken. The contributor role was written down,
+reviewed and taught for weeks before anyone executed it; the first time it ran,
+it did not work at all, and three further defects surfaced one behind the other
+as each was fixed. None was visible by reading the code. All four are the same
+family — *the gap between a described protocol and a running one* — and they are
+worth naming, because each will recur in any shared-store design:
+
+1. **A guard scoped to a directory can swallow a control channel living inside
+   it.** The publisher-only gate was correctly narrowed to the built-artifact
+   folder — and the request queue lived *inside* that folder, so contributors
+   could file a request that silently never left their machine. Before gating a
+   path, enumerate what else is under it. Coordination data and published data
+   often share a parent for no better reason than convenience.
+2. **A "done" marker must reach the shared store, not just local disk.** Marking
+   a request consumed by moving the file locally looks complete and is not: a
+   per-file sync without deletion leaves the original in the store, so the next
+   pull resurrects it everywhere and the queue is never empty. The fix is a
+   *targeted* delete of the keys you actually consumed — never a mirror-delete
+   flag, which is a whole-tree operation and the one command contributors are
+   told never to run.
+3. **Sync does not delete on the way in.** Files removed remotely stay on local
+   disk, so the requester's own copy outlives the request being actioned and is
+   re-uploaded on every subsequent push — accumulating items that read as pending
+   to anyone listing the prefix. Reconcile against the receipt rather than
+   trusting either side's file list.
+4. **Therefore: "pull before you edit" is unsafe advice when you have unpushed
+   work.** The same no-delete-on-pull behaviour will happily overwrite a local
+   change with the store's older copy, and resurrect files you deliberately
+   deleted. Dry-run the pull, read what it intends to overwrite, then apply.
+
+> **The transferable practice is cheap: simulate the role before you onboard into
+> it.** A distinct machine identity plus an empty local tree exercises the real
+> scripts safely — a run that wrongly succeeds uploads nothing. That one
+> substitution turned four latent failures into an afternoon's work instead of a
+> new joiner's first week.
+
+**Budget for the judgement a rebuild costs, not just the compute.** Where a shared
+artifact carries hand-authored labels over a machine-generated structure, measure
+how many survive a rebuild before assuming the naming is a one-off cost. Ours
+carried 48% across one rebuild and 37% across the next, on identifiers explicitly
+pinned to make them stable — the pinning fixed deduplication *within* a run and
+did nothing for continuity *between* runs. Treat re-labelling as a recurring cost
+of every refresh and schedule accordingly; a half-labelled artifact passes no
+health check and helps nobody.
+
+
 **Machine identity — so the agent knows which machine it is on.** This is the
 part that is specific to agent workflows and easy to miss. Once the same trail
 is reachable from several machines with *different roles*, an agent session must
