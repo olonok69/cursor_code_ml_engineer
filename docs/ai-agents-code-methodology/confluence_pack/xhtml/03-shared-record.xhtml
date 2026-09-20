@@ -1,11 +1,11 @@
 <h2>Shared record (S3 sync) — Cursor</h2>
-<p><strong>Current as of 2026-09-09.</strong> Entry point for sharing <code>document-parser-lambda</code>&#x27;s <strong>gitignored <code>data/</code></strong> — ticket documentation, the ticket knowledge graph, diagnostics, and client source documents — across machines and teammates over S3.</p>
+<p><strong>Current as of 2026-09-10.</strong> Entry point for sharing <code>document-parser-lambda</code>&#x27;s <strong>gitignored <code>data/</code></strong> — ticket documentation, the ticket knowledge graph, diagnostics, and client source documents — across machines and teammates over S3.</p>
 <p>Your machine&#x27;s <code>data/</code> is a <strong>working copy</strong>. The bucket is the source of truth.</p>
 <p><strong>Agents:</strong> company standard is <strong>Cursor</strong>. Open the repo so <code>AGENTS.md</code> / <code>.cursor/rules</code> load; they point at machine-local <code>IDENTITY.md</code>.</p>
 <p>New joiners: start at <strong>For new joiners (Cursor)</strong> (Confluence) <strong>and</strong> unzip <code>ils-s3-sync-YYYYMMDD.zip</code> — same onboarding path. Onboarders: <strong>Onboarder checklist</strong>.</p>
 <hr/>
 <h3>Where things stand</h3>
-<table><thead><tr><th></th><th></th></tr></thead><tbody><tr><td>Bucket</td><td><code>s3://ils-nonprod-knowledge-base</code> (eu-central-1)</td></tr><tr><td>Prefix</td><td><code>document-parser-lambda/data</code></td></tr><tr><td>Contents</td><td>KG, ticket markdown, diagnostics, client binaries</td></tr><tr><td>Size at last measure</td><td>~4,675 objects · ~888 MiB (2026-09-04)</td></tr><tr><td>Versioning</td><td>enabled — <strong>noncurrent versions expire at 30 days</strong></td></tr></tbody></table>
+<table><thead><tr><th></th><th></th></tr></thead><tbody><tr><td>Bucket</td><td><code>s3://ils-nonprod-knowledge-base</code> (eu-central-1)</td></tr><tr><td>Prefix</td><td><code>document-parser-lambda/data</code></td></tr><tr><td>Contents</td><td>KG, ticket markdown, diagnostics, client binaries</td></tr><tr><td>Size at last measure</td><td>~4,675 objects · ~888 MiB (2026-09-04)</td></tr><tr><td>Versioning</td><td>enabled — <strong>noncurrent versions expire at 30 days</strong></td></tr><tr><td>Hand-authored KG names</td><td><strong>102</strong> — rebuilds carry ~<strong>37–48%</strong>; refresh = naming budget</td></tr></tbody></table>
 <ac:structured-macro ac:name="code"><ac:parameter ac:name="language">text</ac:parameter><ac:plain-text-body><![CDATA[                    ┌────────────────────────────────────┐
                     │  s3://ils-nonprod-knowledge-base   │
                     │  prefix: document-parser-lambda/   │
@@ -18,14 +18,14 @@
    │ PUBLISHER        │   │ CONTRIBUTORS     │  │ ~/s3-ils-data    │
    │ one machine      │   │ everyone else    │  │ read-only browse │
    │ holds the baton  │   │ own ticket dirs  │  └──────────────────┘
-   │ owns the KG      │   │ never push KG    │
+   │ owns the KG      │   │ never publish KG │
    └──────────────────┘   └──────────────────┘
 
   WRITE = aws s3 sync   (data-push / data-pull)  — real local disk
   READ  = mountpoint-s3 (mount-data)             — live, read-only]]></ac:plain-text-body></ac:structured-macro>
 <hr/>
 <h3>⚠️⚠️ Recovery expires</h3>
-<p>An overwrite is recoverable <strong>for 30 days, and only if somebody notices.</strong> Nobody audits your rows. Pull before you edit. Push what you changed. If something of yours disappears, say so within the month or it is gone.</p>
+<p>An overwrite is recoverable <strong>for 30 days, and only if somebody notices.</strong> Nobody audits your rows. Push what you changed. Prefer pull before edit — <strong>unless you have unpushed local work</strong>: dry-run first; sync does not delete inbound and will overwrite newer local files with the store&#x27;s older copy, and resurrect files you deleted locally.</p>
 <hr/>
 <h3>Structural rules</h3>
 <ol>
@@ -35,14 +35,17 @@
 <li><strong>Pairs must move together.</strong> Stamp the names overlay with a fingerprint of the graph; health check must fail on mismatch.</li>
 </ol>
 <hr/>
-<h3>Roles</h3>
-<table><thead><tr><th>Role</th><th>Who</th><th>Does</th></tr></thead><tbody><tr><td><strong>Publisher</strong></td><td>one machine at a time (currently named in live ops docs)</td><td>rebuilds/publishes KG; only role that may <code>--delete</code></td></tr><tr><td><strong>Contributor</strong></td><td>every other machine / teammate</td><td>owns <code>changes/sst-NNNN/</code>; pushes docs; <strong>reads</strong> KG</td></tr></tbody></table>
+<h3>Roles and baton scope (2026-09-10)</h3>
+<table><thead><tr><th>Role</th><th>Who</th><th>Does</th></tr></thead><tbody><tr><td><strong>Publisher</strong></td><td>one machine at a time</td><td>rebuilds/publishes KG; only role that may <code>--delete</code></td></tr><tr><td><strong>Contributor</strong></td><td>every other machine / teammate</td><td>owns <code>changes/sst-NNNN/</code>; pushes docs + <strong>refresh requests</strong>; <strong>reads</strong> KG</td></tr></tbody></table>
 <ac:structured-macro ac:name="code"><ac:parameter ac:name="language">bash</ac:parameter><ac:plain-text-body><![CDATA[./publisher.sh status | claim "why" | release]]></ac:plain-text-body></ac:structured-macro>
-<blockquote><p>⚠️ Two publishers destroy <code>community_labels.json</code> silently. Returning machines: set <code>MACHINE_ROLE=&quot;contributor&quot;</code> and <code>./identity.sh --write</code> <strong>before</strong> pull/push.</p></blockquote>
+<p>The baton gate in <code>data-push.sh</code> protects <strong><code>knowledge-graph/</code> only</strong> — not the whole sync. Contributors push ticket folders and other roots normally. When they lack the baton they see <strong><code>SKIPPED knowledge-graph/</code></strong> (expected) and still upload <strong><code>refresh_queue/</code></strong> only from that tree.</p>
+<blockquote><p>⚠️ Two publishers destroy <code>community_labels.json</code> silently. Returning machines: set <code>MACHINE_ROLE=&quot;contributor&quot;</code> and <code>./identity.sh --write</code> <strong>before</strong> pull/push.</p>
+<p>IAM still does <strong>not</strong> enforce this — <code>KnowledgeBaseS3</code> can write the whole prefix. Baton + convention are the real guard.</p></blockquote>
 <p><strong>Contributor asks for rebuild (no locks):</strong></p>
 <ac:structured-macro ac:name="code"><ac:parameter ac:name="language">bash</ac:parameter><ac:plain-text-body><![CDATA[kg_refresh.sh request "why"
 ./data-push.sh --go]]></ac:plain-text-body></ac:structured-macro>
 <p>One file per request under <code>refresh_queue/</code>. Cursor: ask the agent to file the request; do <strong>not</strong> ask it to publish the KG on a contributor machine.</p>
+<p>Publisher: <code>kg_refresh.sh queue</code> before rebuild; after health check <code>kg_refresh.sh queue --clear</code> then push. <strong><code>--clear</code> deletes the consumed keys in the bucket</strong> (a local-only archive leaves the original keys in S3; the next pull resurrects them everywhere). Reconcile zombies against the receipt — sync does not delete on pull.</p>
 <hr/>
 <h3>Access</h3>
 <table><thead><tr><th>Profile</th><th>Account</th><th>Permission set</th><th>Here</th></tr></thead><tbody><tr><td><code>kb-s3</code></td><td>055622654641</td><td><code>KnowledgeBaseS3</code></td><td>⚠️ <strong>only</strong> role that can WRITE this bucket</td></tr><tr><td><code>dev-nonprod</code></td><td>055622654641</td><td><code>DeveloperNonprod</code></td><td>reads; PutObject denied by design</td></tr><tr><td><code>shared-ecr</code></td><td>901059153226</td><td><code>SharedEcrPull</code></td><td>ECR fallback — not needed for sync</td></tr></tbody></table>
@@ -55,26 +58,36 @@
 <p>Re-run after any <code>config.env</code> change.</p>
 <hr/>
 <h3>Daily use</h3>
-<ac:structured-macro ac:name="code"><ac:parameter ac:name="language">bash</ac:parameter><ac:plain-text-body><![CDATA[./data-pull.sh                # dry run DEFAULT
+<ac:structured-macro ac:name="code"><ac:parameter ac:name="language">bash</ac:parameter><ac:plain-text-body><![CDATA[./data-pull.sh                # dry run DEFAULT — read overwrite intent if you have local edits
 ./data-pull.sh --go
 
 # ... work locally in Cursor on real disk under data/changes/...
 
 ./data-push.sh
-./data-push.sh --go]]></ac:plain-text-body></ac:structured-macro>
+./data-push.sh --go           # contributors: SKIPPED knowledge-graph/ is normal]]></ac:plain-text-body></ac:structured-macro>
 <p><code>--delete</code> is <strong>publisher-only</strong>. <code>data-pull.sh</code> runs <code>ledger_check.sh</code> first (advisory).</p>
 <p><strong>KG query (Cursor):</strong> project <strong><code>kg</code> skill</strong> / Agent, or <code>.\scripts\kg_query.ps1</code> / <code>kg_query.sh</code>.</p>
-<p>Contributors never run KG publish / rebuild.</p>
+<p>Contributors never run KG publish / rebuild. Publisher rebuild = naming budget (~37–48% of 102 names survive).</p>
 <hr/>
 <h3>Behavioural rules people break</h3>
 <ol>
-<li>⚠️⚠️ <strong>Recovery expires</strong> — see above.</li>
-<li><strong>Shared ledgers are append-only</strong> — <code>STATUS.md</code>, <code>TICKETS.md</code>, <code>FOLLOWUPS.md</code>, <code>TEST_MAP.md</code>, <code>CUSTOMER_GUIDANCE.md</code>. Add rows; never rewrite someone else&#x27;s.</li>
+<li>⚠️⚠️ <strong>Recovery expires</strong> — see above; unpushed work makes blind pull unsafe.</li>
+<li><strong>Shared ledgers are append-only</strong> — <code>STATUS.md</code>, <code>TICKETS.md</code>, <code>FOLLOWUPS.md</code>, <code>TEST_MAP.md</code>, <code>CUSTOMER_GUIDANCE.md</code>. Add rows; never rewrite someone else&#x27;s. Pull-time check is half the job: <strong>also guard the push</strong> (<code>exit 4</code> / <code>REFUSED</code> when a hub file moved in the bucket; do not invent <code>--allow-clobber</code> yourself). A per-machine ledger file needs exactly <strong>one</strong> writer enforced in the tool.</li>
 <li><strong>Per-task folders need no coordination</strong> — one folder per ticket, one owner.</li>
 <li><strong>The shared store wins on divergence</strong> — &quot;I have it locally&quot; is not an argument once theirs is published.</li>
 <li><strong>Mirror-delete belongs to one role</strong> — publisher only.</li>
 <li><strong>Widening scope is a security event</strong> — scan first, <strong>canary the scanner</strong>, then reconcile inventory (clean transfer ≠ completeness).</li>
+<li><strong>Habit needs a mechanism</strong> — use the Cursor <strong><code>day</code> skill</strong> (<code>day start</code> / <code>day end</code>); documentation alone does not enforce pull/push.</li>
 </ol>
+<h4>Lessons from shipping the contributor role broken</h4>
+<p>A documented role is untested code until someone executes it. Four defects of the same family (described protocol ≠ running protocol):</p>
+<ol>
+<li><strong>A guard scoped to a directory can swallow a control channel inside it</strong> — <code>refresh_queue/</code> lived under <code>knowledge-graph/</code>; an early whole-tree baton blocked requests from leaving the machine. Enumerate children before gating a path.</li>
+<li><strong>A &quot;done&quot; marker must reach the shared store</strong> — local archive without deleting bucket keys resurrects the queue on every pull. Targeted delete of consumed keys; never contributor <code>--delete</code>.</li>
+<li><strong>Sync does not delete on the way in</strong> — remote removals stay local; stale local requests re-upload. Reconcile against the receipt.</li>
+<li><strong>Therefore &quot;pull before you edit&quot; is unsafe with unpushed work</strong> — dry-run first.</li>
+</ol>
+<blockquote><p><strong>Simulate the role before you onboard into it.</strong> A distinct <code>MACHINE_NAME</code> + empty tree exercises real scripts safely. Record honesty: a same-box simulation with the publisher&#x27;s write credentials is <strong>not</strong> a two-person proof.</p></blockquote>
 <hr/>
 <h3>Setting up a machine</h3>
 <ol>
@@ -87,11 +100,11 @@
 <p>Scripts live in the distributable zip (<code>ils-s3-sync-YYYYMMDD.zip</code>). After unzip: edit config, then identity + validate.</p>
 <hr/>
 <h3>Troubleshooting (short)</h3>
-<table><thead><tr><th>Symptom</th><th>Fix</th></tr></thead><tbody><tr><td>Token expired / ForbiddenException</td><td>Re-login SSO first; then re-read the error</td></tr><tr><td>AccessDenied on PutObject</td><td>On <code>dev-nonprod</code> by design — need <code>kb-s3</code> to write</td></tr><tr><td>Mount empty / transport endpoint</td><td>Wrong <code>PREFIX</code>, or <code>./unmount-data.sh</code> then remount</td></tr><tr><td>Write fails on mount</td><td>By design — write via <code>data-push.sh</code></td></tr><tr><td>Teammate work vanished after your push</td><td>You used <code>--delete</code> from stale view — restore within 30 days</td></tr><tr><td><code>kg_labels.py check</code> lost/unnamed</td><td>Graph + labels unpaired — re-pull both; do not publish over it</td></tr></tbody></table>
+<table><thead><tr><th>Symptom</th><th>Fix</th></tr></thead><tbody><tr><td>Token expired / ForbiddenException</td><td>Re-login SSO first; then re-read the error</td></tr><tr><td>AccessDenied on PutObject</td><td>On <code>dev-nonprod</code> by design — need <code>kb-s3</code> to write</td></tr><tr><td>Mount empty / transport endpoint</td><td>Wrong <code>PREFIX</code>, or <code>./unmount-data.sh</code> then remount</td></tr><tr><td>Write fails on mount</td><td>By design — write via <code>data-push.sh</code></td></tr><tr><td><code>SKIPPED knowledge-graph/</code> on contributor push</td><td><strong>Expected</strong> — ticket roots + <code>refresh_queue/</code> still push</td></tr><tr><td>Teammate work vanished after your push</td><td>You used <code>--delete</code> from stale view — restore within 30 days</td></tr><tr><td>Queue never empties after <code>--clear</code></td><td>Clear must delete S3 keys; push the receipt; both sides pull</td></tr><tr><td><code>kg_labels.py check</code> lost/unnamed</td><td>Graph + labels unpaired — re-pull both; do not publish over it</td></tr></tbody></table>
 <hr/>
 <h3>Known gaps</h3>
 <ul>
-<li>Two-machine live round-trip may still be unproven until the next joiner completes the onboarder acceptance test — record the result.</li>
+<li>Full two-person live round-trip may still be unproven; simulated-role passes are partial. Next joiner completes the onboarder acceptance test — record the result.</li>
 <li>Never trust a filter you have not seen reject something.</li>
 <li>A clean dry-run is not a completeness check.</li>
 </ul>

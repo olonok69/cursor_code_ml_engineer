@@ -70,13 +70,18 @@ sudo apt-get install -y ./mount-s3.deb    # x86_64 (WSL/Ubuntu)
 <p>Full diagram, troubleshooting, and publisher rules: sibling page <strong>Shared record (S3 sync)</strong>.</p>
 <hr/>
 <h3>5. ⚠️⚠️ The rules that actually matter</h3>
-<p><strong>1. Recovery expires at 30 days, and you own your own work.</strong> The bucket is versioned, so if someone overwrites your file it can be recovered — for 30 days, and only if somebody notices. Nobody audits your rows. <strong>Pull before you edit, push what you changed</strong>, and if something of yours disappears, say so within the month or it is gone.</p>
+<p><strong>1. Recovery expires at 30 days, and you own your own work.</strong> The bucket is versioned, so if someone overwrites your file it can be recovered — for 30 days, and only if somebody notices. Nobody audits your rows. <strong>Push what you changed.</strong> Prefer <strong>pull before you edit</strong> — but if you already have <strong>unpushed</strong> local edits, dry-run the pull first and read what it would overwrite: sync does not delete on the way in, and it will happily replace your newer local copy with the store&#x27;s older one. If something of yours disappears, say so within the month or it is gone.</p>
 <p><strong>2. Write via sync, read via mount.</strong> <code>data-push.sh</code> / <code>data-pull.sh</code> work on real local disk. The mount at <code>~/s3-ils-data</code> is read-only <em>on purpose</em> — object storage has no locking and no atomic rename.</p>
 <p><strong>3. Never use <code>--delete</code>.</strong> It mirrors exactly. From a stale local view it erases a colleague&#x27;s work. Publisher-only.</p>
-<p><strong>4. Never push <code>knowledge-graph/</code>, never rebuild/publish the KG.</strong> The graph tree includes <strong>hand-authored</strong> community names that nothing regenerates. Two machines publishing destroys them silently. You <em>read</em> it in Cursor with the project <strong><code>kg</code> skill</strong> (or ask the agent; under the hood: <code>.\scripts\kg_query.ps1</code> / <code>kg_query.sh</code>).</p>
+<p><strong>4. Never publish <code>knowledge-graph/</code>, never rebuild the KG.</strong> There are <strong>102</strong> hand-authored community names that nothing regenerates — and even our own rebuilds only carry ~<strong>37–48%</strong> across. Two machines publishing destroys them silently. You <em>read</em> the graph in Cursor with the project <strong><code>kg</code> skill</strong> (or ask the agent; under the hood: <code>.\scripts\kg_query.ps1</code> / <code>kg_query.sh</code>).</p>
 <p>If you think a refresh is due, <strong>file a request</strong> and push that — do not rebuild:</p>
 <pre class="code"><code>bash ../knowledge-graph/kg_refresh.sh request &quot;why you think so&quot;
 ./data-push.sh --go</code></pre>
+<p>✅ <strong>The tool enforces this, and your normal pushes are unaffected.</strong> On a contributor machine <code>data-push.sh --go</code> pushes every other root as usual; it only skips publishing the graph tree and still uploads <code>knowledge-graph/refresh_queue/</code> (your request mailbox). Expect a line like:</p>
+<pre class="code"><code>SKIPPED knowledge-graph/: &#x27;groundtruth&#x27; holds the publisher baton; this machine is &#x27;&lt;yours&gt;&#x27;.
+  The graph and its names are publisher-only, so only refresh_queue/ is pushed from here.
+  This is expected on a contributor machine and is NOT an error.</code></pre>
+<p>That line is normal. Do not &quot;fix&quot; it or escalate it.</p>
 <p><strong>5. Shared ledgers are append-only.</strong> <code>STATUS.md</code>, <code>TICKETS.md</code>, <code>FOLLOWUPS.md</code>, <code>TEST_MAP.md</code>, <code>CUSTOMER_GUIDANCE.md</code>. Add your rows; never rewrite someone else&#x27;s. Last-writer-wins drops their line silently — <code>ledger_check.sh</code> only <em>warns</em> on the next pull.</p>
 <p>Everything else is naturally safe: <strong>your ticket folders are yours.</strong> <code>changes/sst-NNNN/</code> is one person&#x27;s workstream.</p>
 <hr/>

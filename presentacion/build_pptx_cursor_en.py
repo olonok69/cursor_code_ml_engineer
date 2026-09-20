@@ -1113,7 +1113,7 @@ def slide_30(prs):
     card(slide, 6.8, 2.0, 5.85, 2.55, "B · Day to day: S3-backed record", [
         "Narrow scope: changes/**/*.md + graph (no client data)",
         "Write via sync; read via READ-ONLY mount",
-        "Dry-run by default; --delete opt-in (don't delete a teammate's work)",
+        "Dry-run by default; guard BOTH directions (you clobber without --delete too)",
         "ONE publisher. Derived is per file, not per folder",
     ], GREEN, 1.65)
     card(slide, 0.7, 4.7, 11.95, 1.5,

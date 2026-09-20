@@ -17,7 +17,7 @@ hr{border:0;border-top:1px solid #dfe1e6;margin:2em 0}
 <h1>Cursor — AI methodology — Onboarder checklist (Cursor)</h1>
 <div class="nav"><a href="00-index.html">Index</a> · <a href="01-for-new-joiners.html">For new joiners (Cursor)</a> · <strong>Onboarder checklist (Cursor)</strong> · <a href="03-shared-record.html">Shared record (S3 sync)</a> · <a href="04-diagnose.html">Diagnose before you spend</a> · <a href="05-verify.html">Verify: the layered test battery</a> · <a href="06-context.html">Context architecture</a> · <a href="07-human-gate.html">Human gate, continuity, review, checklist</a></div>
 <h2>Onboarder checklist (Cursor) — your side, not theirs</h2>
-<p><strong>Current as of 2026-09-09.</strong> Brings a new team member online as a <strong>contributor</strong>. They start in <strong>Cursor</strong> (Confluence joiner page + open the lambda repo). Hand them <strong>For new joiners (Cursor)</strong> and <strong><code>ils-s3-sync-YYYYMMDD.zip</code></strong> together.</p>
+<p><strong>Current as of 2026-09-10.</strong> Brings a new team member online as a <strong>contributor</strong>. They start in <strong>Cursor</strong> (Confluence joiner page + open the lambda repo). Hand them <strong>For new joiners (Cursor)</strong> and <strong><code>ils-s3-sync-YYYYMMDD.zip</code></strong> together.</p>
 <p>Also read <strong>Shared record (S3 sync)</strong> if you have not — this checklist assumes it.</p>
 <hr/>
 <h3>⛔ Step 0 — the gate, and it is not yours</h3>
@@ -37,12 +37,13 @@ hr{border:0;border-top:1px solid #dfe1e6;margin:2em 0}
 <li>You give them Confluence <strong>For new joiners</strong> <strong>and</strong> <code>ils-s3-sync-YYYYMMDD.zip</code> in the same breath — zip is required for sync scripts, not an optional extra.</li>
 <li>Machine role: <code>IDENTITY.md</code> via <code>AGENTS.md</code> — contributor never publishes the KG.</li>
 <li>Human gate: agent does not push / open-merge PRs / deploy unless they explicitly ask in that session.</li>
-<li>KG query = Cursor <strong><code>kg</code> skill</strong> / <code>scripts/kg_query.ps1</code>.</li>
+<li>KG query = Cursor <strong><code>kg</code> skill</strong> / <code>scripts/kg_query.ps1</code>. Refresh = file a <code>kg_refresh.sh request</code> only (publisher owns rebuild).</li>
 </ol>
-<blockquote><p>⚠️⚠️ <strong><code>KnowledgeBaseS3</code> does not distinguish <code>knowledge-graph/</code> from <code>changes/</code>.</strong> A contributor <em>can</em> overwrite the KG. Single-writer is <strong>baton + convention</strong>, not IAM. Say this out loud.</p></blockquote>
+<blockquote><p>⚠️⚠️ <strong><code>KnowledgeBaseS3</code> does not distinguish <code>knowledge-graph/</code> from <code>changes/</code>.</strong> A contributor <em>can</em> overwrite the KG. Single-writer is <strong>baton + convention</strong>, not IAM. Say this out loud.</p>
+<p>The baton gate in <code>data-push.sh</code> is <strong>scoped to <code>knowledge-graph/</code> only</strong> (as of 2026-09-10). Contributors push ticket folders normally; the gate skips publishing the graph and still allows <code>refresh_queue/</code>. Expect them to see a <strong><code>SKIPPED knowledge-graph/</code></strong> line — that is success, not a failure.</p></blockquote>
 <hr/>
 <h3>Step 2 — decide write posture before they configure</h3>
-<table><thead><tr><th>Posture</th><th><code>config.env</code></th><th>They can</th></tr></thead><tbody><tr><td><strong>Read-only start</strong> (recommended day 1)</td><td><code>READ_PROFILE=&quot;dev-nonprod&quot;</code></td><td>pull, ledger check, read baton — never write</td></tr><tr><td><strong>Full contributor</strong></td><td><code>PROFILE=&quot;kb-s3&quot;</code></td><td>above + push their own ticket folders</td></tr></tbody></table>
+<table><thead><tr><th>Posture</th><th><code>config.env</code></th><th>They can</th></tr></thead><tbody><tr><td><strong>Read-only start</strong> (recommended day 1)</td><td><code>READ_PROFILE=&quot;dev-nonprod&quot;</code></td><td>pull, ledger check, read baton — never write</td></tr><tr><td><strong>Full contributor</strong></td><td><code>PROFILE=&quot;kb-s3&quot;</code></td><td>above + push their own ticket folders + refresh requests</td></tr></tbody></table>
 <hr/>
 <h3>Step 3 — their setup, per machine</h3>
 <ol>
@@ -59,29 +60,30 @@ hr{border:0;border-top:1px solid #dfe1e6;margin:2em 0}
 <hr/>
 <h3>Step 4 — teach the five rules (10 minutes)</h3>
 <ol>
-<li>⚠️⚠️ Recovery expires at <strong>30 days</strong> — own your own work; pull / push / speak up.</li>
+<li>⚠️⚠️ Recovery expires at <strong>30 days</strong> — own your own work; push what you changed; pull before edit <strong>unless</strong> you have unpushed work (dry-run first).</li>
 <li>Write via sync, read via mount (<code>~/s3-ils-data</code> read-only on purpose).</li>
 <li>Pull at start → work locally → push at end. One owner per ticket folder.</li>
 <li>Never <code>--delete</code> (publisher-only).</li>
-<li>Never push <code>knowledge-graph/</code> / never publish KG; file <code>kg_refresh.sh request</code> instead.</li>
+<li>Never <strong>publish</strong> <code>knowledge-graph/</code> / never rebuild KG; file <code>kg_refresh.sh request</code> instead. <strong><code>SKIPPED knowledge-graph/</code></strong> on push is expected; <code>refresh_queue/</code> still goes up. Names: <strong>102</strong> authored; ~<strong>37–48%</strong> survive a rebuild — refresh is a naming budget, not free.</li>
 </ol>
 <p><strong>Append-only ledgers</strong> — add rows only; <code>ledger_check.sh</code> warns on pull.</p>
 <hr/>
 <h3>Step 5 — prove the round trip (acceptance test)</h3>
-<blockquote><p>▶▶ <strong>Two-machine § of <code>GO_LIVE_CHECKLIST</code> may never have been run.</strong> A second person joining <strong>is</strong> the acceptance test — treat it as one and record the result.</p></blockquote>
+<blockquote><p>▶▶ <strong>Two-machine § of <code>GO_LIVE_CHECKLIST</code> may never have been run with two real people.</strong> A simulated contributor (second <code>MACHINE_NAME</code> + <code>dev-nonprod</code> read) can exercise baton + queue paths, but writes may still use the publisher&#x27;s <code>kb-s3</code> credentials. A second person joining <strong>is</strong> the full acceptance test — treat it as one and record the result.</p></blockquote>
 <p>On their machine:</p>
 <ul>
 <li>[ ] <code>./identity.sh</code> → <strong>CONTRIBUTOR</strong></li>
 <li>[ ] <code>./data-pull.sh --go</code> completes</li>
-<li>[ ] <code>python3 &lt;their data&gt;/knowledge-graph/kg_labels.py check</code> → <strong>0 unnamed, 0 lost</strong>, no fingerprint mismatch (graph + labels arrived as a <strong>matched pair</strong>)</li>
+<li>[ ] <code>python3 &lt;their data&gt;/knowledge-graph/kg_labels.py check</code> → <strong>0 unnamed, 0 lost</strong>, no fingerprint mismatch (graph + labels arrived as a <strong>matched pair</strong>; expect <strong>102/102</strong> matched on a healthy pull)</li>
 <li>[ ] In <strong>Cursor</strong>, KG query for a known ticket returns a community <strong>name</strong>, not a bare integer (proves hand-authored labels survived)</li>
+<li>[ ] Their first <code>./data-push.sh --go</code> shows <strong><code>SKIPPED knowledge-graph/</code></strong> (expected) and still pushes ticket work</li>
 </ul>
 <p>Contributor loop:</p>
 <ul>
 <li>[ ] They create <code>changes/sst-SANDBOX/notes.md</code> → <code>./data-push.sh --go</code></li>
 <li>[ ] You pull on publisher and see it</li>
-<li>[ ] They <code>kg_refresh.sh request &quot;smoke test&quot;</code> → push; you see queue with <strong>their</strong> machine name</li>
-<li>[ ] Clear queue → both sides empty</li>
+<li>[ ] They <code>kg_refresh.sh request &quot;smoke test&quot;</code> → push; you see queue with <strong>their</strong> machine name (<code>refresh_queue/</code> must not be baton-blocked)</li>
+<li>[ ] <code>kg_refresh.sh queue --clear</code> → push → both sides empty (<code>--clear</code> must <strong>delete the consumed keys in the bucket</strong>, not only archive locally — otherwise the next pull resurrects the request everywhere)</li>
 <li>[ ] They delete sandbox and push — <code>--delete</code> stays with publisher</li>
 </ul>
 <hr/>
@@ -97,10 +99,11 @@ hr{border:0;border-top:1px solid #dfe1e6;margin:2em 0}
 <h3>Known sharp edges — tell them before they hit these</h3>
 <ul>
 <li>Never diagnose access from a CLI error without re-login first.</li>
-<li>A check that cannot distinguish &quot;no&quot; from &quot;couldn&#x27;t ask&quot; is not evidence.</li>
+<li>A check that cannot distinguish &quot;no&quot; from &quot;couldn&#x27;t ask&quot; is not evidence (baton once reported &quot;nobody holds it&quot; on an expired token).</li>
 <li>A clean dry-run only says &quot;what I was asked to send, I sent&quot;.</li>
 <li><code>aws s3 --include</code> is case-sensitive.</li>
 <li>Sync walks the whole tree before filters — use <code>SYNC_ROOTS</code>, not raw <code>data/</code>.</li>
+<li>Gate a path → enumerate what else lives under it (<code>refresh_queue/</code> inside <code>knowledge-graph/</code> was the classic trap).</li>
 </ul>
 <hr/>
 <h3>Confirm they are productive</h3>
@@ -109,7 +112,7 @@ hr{border:0;border-top:1px solid #dfe1e6;margin:2em 0}
 <li>[ ] They can pull and see tickets + KG</li>
 <li>[ ] Round trip proven (Step 5)</li>
 <li>[ ] KG query works in <strong>Cursor</strong></li>
-<li>[ ] They know 30-day rule, append-only ledgers, <code>--delete</code> is not theirs</li>
+<li>[ ] They know 30-day rule, append-only ledgers, <code>--delete</code> is not theirs, <strong><code>SKIPPED knowledge-graph/</code></strong> is normal</li>
 <li>[ ] They use <strong>Cursor</strong> from day one (repo open; <code>AGENTS.md</code> loads)</li>
 <li>[ ] They received <strong><code>ils-s3-sync-YYYYMMDD.zip</code></strong> with the Confluence joiner page</li>
 </ul>

@@ -309,8 +309,10 @@ rules, desde la UI del producto. No hay comando `/plugin install`.
 .cursor/skills/methodology-plan/SKILL.md
 ```
 Ejemplos reales de skills de proyecto: [`ejemplos/skills-plugins/.cursor/skills/`](./ejemplos/skills-plugins/.cursor/skills/)
-(`audit`, `deploy-staging`). Pack de metodología con las cuatro skills anteriores:
+(`audit`, `deploy-staging`, `day`). Pack de metodología con las skills anteriores:
 [`docs/ai-agents-code-methodology/cursor/skills/`](./docs/ai-agents-code-methodology/cursor/skills/).
+
+⚠️ **La razón más fuerte para hacer una skill no es la comodidad: es que se cumpla.** Una regla que solo vive en un runbook se degrada en silencio, y nadie ve la degradación. La skill `day` existe porque "pull al empezar, push al terminar" estuvo en nuestro documento de operaciones **meses sin cumplirse**; empaquetarla como rutina invocable la ejecuta y además deja el rastro que hace visible el incumplimiento. Ver §15B.
 
 > **Nota (agosto 2026):** Skills, Marketplace, `.cursor/agents/` y `agent -p` están documentados en
 > `docs.cursor.com`. Si una fila de [`ejemplos/README.md`](./ejemplos/README.md) parece antigua, confía
@@ -734,8 +736,11 @@ ticket/PR; moverse degenera en empaquetarlo todo; y cada compañero acaba con **
 | **Los pares viajan juntos** | El overlay solo vale contra el grafo del que salió, pero el sync compara **objeto a objeto** → grafo nuevo + nombres viejos = nombres en la comunidad equivocada, **sin error**. Sella el overlay con una **huella del grafo**. |
 | **Coordinar sin locks** | Pedir rebuild: cada contribuidor escribe **su propio fichero** en `refresh_queue/<utc>-<máquina>.request` (`kg_refresh.sh request`). Claves distintas nunca colisionan. |
 | ⚠️⚠️ **La recuperación CADUCA — y cada uno responde de su trabajo** | El versionado se describe siempre como "la red de seguridad", punto. Es media verdad: casi siempre lleva una regla de ciclo de vida que **expira las versiones no actuales a los 30 días**. Una sobrescritura es recuperable **30 días y solo si alguien se da cuenta**; nadie audita los ficheros de nadie. Dilo literal en el onboarding: *baja antes de editar, sube lo que cambiaste, y si desaparece algo tuyo, dilo dentro del mes o se ha ido.* |
-| **Los ledgers compartidos son de solo-append** | `STATUS.md`, `FOLLOWUPS.md`… Last-writer-wins sin merge: **reescribir uno borra en silencio la línea de otra persona**, sin conflicto ni error. Añade filas, no reestructures las ajenas. Detectarlo es barato: una línea presente en local y ausente en la copia entrante es borrado deliberado o pisotón → un aviso en el `pull` casi no tiene falsos positivos. Es la **visibilidad** que el versionado no da: hace la pérdida *recuperable*, no *advertida*. |
+| **Los ledgers compartidos son de solo-append** | `STATUS.md`, `FOLLOWUPS.md`… Last-writer-wins sin merge: **reescribir uno borra en silencio la línea de otra persona**, sin conflicto ni error. Añade filas, no reestructures las ajenas. Detectarlo es barato: una línea presente en local y ausente en la copia entrante es borrado deliberado o pisotón → un aviso en el `pull` casi no tiene falsos positivos. Es la **visibilidad** que el versionado no da: hace la pérdida *recuperable*, no *advertida*. ⚠️⚠️ **Construimos ese chequeo exacto y aun así perdimos trabajo** — ver la fila siguiente. |
 | **En divergencia manda el almacén compartido** | *"Yo lo tengo en local"* deja de ser argumento en cuanto la versión de otro es la publicada. Acuérdalo **antes**: el instinto va al revés, porque tu copia es la que ves. |
+| ⚠️⚠️ **Protege AMBAS direcciones — el `pull` te pisa a ti, el `push` pisa a tu compañero** | El chequeo en el `pull` es el que todo el mundo construye, porque protege a quien lo ejecuta. Es **la mitad del problema**. Medido: dos máquinas editaron el ledger la misma tarde; el segundo `push` reemplazó el primero entero — **11 líneas perdidas, sin conflicto, sin error, y nada en la máquina que empujó parecía mal después.** Pasó un día sin que nadie lo viera. Un `pull` puede avisarte *a ti*; un `push` destruye evidencia en **una máquina que tú nunca miras**. Protege también el `push`: antes de subir un fichero compartido, comprueba si la copia publicada se movió desde tu última sincronización, y **rechaza (`exit 4` / `REFUSED`)** — no avises: un aviso en un preview de 60 líneas es exactamente lo que se pasa por alto. Escape: `--allow-clobber` — publícalo *y* la razón para no usarlo. |
+| ⚠️ **Un fichero por máquina necesita EXACTAMENTE un escritor, forzado en la herramienta** | Partir un ledger compartido en un fichero por máquina elimina la contención *por diseño* — y la herramienta puede romperlo igual. La nuestra subía el fichero de **todas** las máquinas, incluida su copia permanentemente vieja de la de otro, revirtiendo en silencio el registro de esa persona. **El primer síntoma no fue un fichero corrupto: fue una conclusión equivocada sobre una persona** — con su registro borrado, el panel decía que nunca había cerrado su día. Sí lo había cerrado. Antes de concluir que un compañero se saltó un paso, comprueba si tu propia herramienta se comió la evidencia. |
+| ⚠️ **Un guardia que grita en falso el primer día enseña a la gente a saltárselo** | Nuestro guardia de `push` comparaba solo marcas de tiempo, y habría rechazado el primerísimo `push` de un compañero —sobre ficheros que acababa de bajar y tenía byte a byte— porque su log aún no registraba ningún `pull` real. Ahora pregunta: *¿esta subida cambiaría realmente el objeto publicado?* **La tasa de falsos positivos de un guardia es una propiedad de seguridad, no un detalle de usabilidad**: cada rechazo espurio gasta credibilidad, y el override que la gente aprende (`--allow-clobber`) es justo el que provoca el incidente. |
 
 **Lo específico de agentes — la máquina tiene rol.** En cuanto el mismo registro es
 alcanzable desde varias máquinas con permisos distintos, la sesión debe saber **dónde está y
@@ -747,11 +752,52 @@ mount presente) y el `AGENTS.md` **apunta a él**, así que toda sesión lee su 
 `IDENTITY.md` es el único fichero que **no** debe ser igual en todas partes: gitignored,
 nunca sincronizado, nunca empaquetado.
 
+**Y el hábito necesita un mecanismo, no un párrafo.** Todo lo anterior son *reglas*, y las reglas en
+un runbook se degradan en silencio. Las nuestras lo hicieron: "pull al empezar, push al terminar"
+estuvo en el documento de operaciones **durante meses sin cumplirse**, justo en la máquina que
+publicaba. Nada registraba una sincronización, así que nada podía mostrar la deriva.
+
+La solución: empaquetar los dos momentos en una rutina invocable — `day start` / `day end` —
+consciente del rol. Ejemplo:
+[`ejemplos/skills-plugins/.cursor/skills/day/SKILL.md`](./ejemplos/skills-plugins/.cursor/skills/day/SKILL.md);
+scripts:
+[`ejemplos/metodologia/s3-sync/`](./ejemplos/metodologia/s3-sync/). Empieza por
+`config.env.example`: genericizar los once scripts cambió **una línea en un fichero**.
+
+Léela por la forma, no por los comandos. Cada paso peligroso responde primero una pregunta —
+*¿hay trabajo local sin publicar?, ¿qué sobrescribe este pull?, ¿puede esta máquina publicar el
+artefacto derivado?* — y donde es ambiguo **se detiene y pregunta**. Una rutina que resuelve sola
+el caso ambiguo es justo la que acaba destruyendo el trabajo de otro. El rastro de sync es lo que
+hizo detectables los dos fallos anteriores.
+
 > **Antes del primer push compartido:** limpiar credenciales incrustadas en los docs. No es
 > hipotético — las notas de investigación capturan URLs firmadas y tokens **a propósito**,
 > como evidencia de un bug, y son exactamente las cadenas que no quieres en almacenamiento
 > compartido. Pasar el escáner de sanitización (skill `sanitise-diff`) sobre **todo** el
 > registro, no sobre un diff.
+
+> ⚠️⚠️ **Un guardia de seguridad puede desactivar en silencio el instrumento que prueba el hábito.**
+> Añadimos un snapshot previo al `pull` para hacerlo reversible —un guardia genuinamente bueno— y
+> este instalaba su propio `trap ... EXIT` para limpiar un temporal. Bash mantiene **un solo** trap
+> EXIT, así que reemplazó al que escribía el log de sincronización. El bloque del snapshot solo
+> corre en la ruta real (`--go`), de modo que **los dry-run siguieron registrando y todos los `pull`
+> reales quedaron sin registrar durante dos días**, mientras la columna "último pull" seguía llena y
+> perfectamente plausible.
+>
+> Dos cosas generalizan. Primero, **pregunta qué más reclama el mismo recurso de ranura única** al
+> añadir un guardia: el trap EXIT, `$?`, un contexto `set -e`. Segundo, **la ruta real y la ruta de
+> ensayo son código distinto, y solo una se ejercita a la ligera** — un instrumento que funciona en
+> dry-run no está probado.
+>
+> El aislamiento también merece copiarse: una línea marcador añadida al log sobrevivió a un `pull`
+> real **byte a byte**, lo que descartó *"se escribió y luego se sobrescribió"* y probó *"nunca se
+> escribió"*. Un conteo de líneas no habría distinguido ambas.
+
+> ⚠️ **Mide una optimización antes de citarla.** Restringir el barrido al único directorio que
+> cambia a diario se predijo como pasar el chequeo "de dos minutos a segundos". Medido:
+> **212s → 123s, un 40%** — la mayor parte del coste estaba *dentro* de ese directorio. Una
+> optimización citada de intuición se convierte en dato documentado con un solo copy-paste, y de ahí
+> pasa al onboarding. Mídela una vez, escribe el número y ponle fecha.
 
 ---
 

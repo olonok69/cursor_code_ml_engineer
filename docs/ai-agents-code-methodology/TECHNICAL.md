@@ -460,9 +460,21 @@ because nothing stops them):
    line — no conflict, no error. Add rows; never restructure someone else's. A
    pull-time warning (line present locally, absent incoming) has essentially no
    false positives — that is the **visibility** versioning does not give you.
+   ⚠️⚠️ **That check covers one direction; the damage happens in the other.** Two
+   machines edited the same ledger the same afternoon; the second **push** replaced
+   the first wholesale (11 lines gone, no conflict). Guard the push too: refuse
+   (`exit 4` / `REFUSED`) when a shared hub file moved in the store since your last
+   sync — do not merely warn. Escape hatch `--allow-clobber`: publish it and the
+   reason not to use it. Compare **content**, not just timestamps (a timestamp-only
+   guard cries wolf on a teammate's first push of byte-identical files).
 3. **The shared store wins on divergence.** *"I have it locally"* stops being an
    argument once someone else's version is the published one. Agree it in advance;
    the instinct runs the other way because your copy is the one you can see.
+4. **A per-machine file needs exactly ONE writer, enforced in the tool.** Splitting
+   a ledger into one file per machine removes contention by design — and the tool
+   can still upload every machine's file, including its stale copy of someone
+   else's. First symptom was not a corrupt file: a wrong conclusion that a
+   colleague had never closed his day.
 
 **Source of truth vs. derived artifact — and the third category people miss.**
 The written records are the source of truth; the queryable index from §6 is
@@ -544,6 +556,28 @@ worth naming, because each will recur in any shared-store design:
 > scripts safely — a run that wrongly succeeds uploads nothing. That one
 > substitution turned four latent failures into an afternoon's work instead of a
 > new joiner's first week.
+
+> ⚠️⚠️ **A safety guard can silently disable the instrument that proves the habit.**
+> A pre-pull snapshot installed its own `trap ... EXIT` to clean up a temp file.
+> Bash keeps **one** EXIT trap, so it replaced the one writing the activity ledger.
+> That block runs only on the real (`--go`) path, so dry runs kept logging and
+> every real pull went unrecorded for two days while the dashboard stayed
+> populated and plausible. Ask what else claims the same single-slot resource;
+> remember the real path and the rehearsal path are different code. A marker line
+> that survived a real pull **byte-identical** separated *"written then
+> overwritten"* from *"never written"* where a line count could not.
+
+> ⚠️ **Measure an optimisation before you quote it.** Restricting the sweep to the
+> one directory that changes daily was predicted to take the check "from two
+> minutes to seconds". Measured **212s → 123s, ~40%**. Quoted from intuition it
+> would have entered onboarding as fact.
+
+> **And the habit needs a mechanism, not a paragraph.** "Pull at the start, push
+> at the end" sat in the ops doc for months without being followed. Package those
+> moments as a callable **`day` skill** (see
+> `docs/ai-agents-code-methodology/cursor/skills/day/` and
+> `ejemplos/metodologia/s3-sync/`). Documentation cannot enforce a habit; a
+> routine with an audit trail can.
 
 **Budget for the judgement a rebuild costs, not just the compute.** Where a shared
 artifact carries hand-authored labels over a machine-generated structure, measure

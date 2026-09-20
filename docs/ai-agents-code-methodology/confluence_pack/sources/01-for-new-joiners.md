@@ -133,9 +133,12 @@ Full diagram, troubleshooting, and publisher rules: sibling page
 
 **1. Recovery expires at 30 days, and you own your own work.**
 The bucket is versioned, so if someone overwrites your file it can be recovered — for
-30 days, and only if somebody notices. Nobody audits your rows. **Pull before you
-edit, push what you changed**, and if something of yours disappears, say so within
-the month or it is gone.
+30 days, and only if somebody notices. Nobody audits your rows. **Push what you
+changed.** Prefer **pull before you edit** — but if you already have **unpushed**
+local edits, dry-run the pull first and read what it would overwrite: sync does not
+delete on the way in, and it will happily replace your newer local copy with the
+store's older one. If something of yours disappears, say so within the month or it
+is gone.
 
 **2. Write via sync, read via mount.**
 `data-push.sh` / `data-pull.sh` work on real local disk. The mount at `~/s3-ils-data`
@@ -144,11 +147,11 @@ is read-only *on purpose* — object storage has no locking and no atomic rename
 **3. Never use `--delete`.**
 It mirrors exactly. From a stale local view it erases a colleague's work. Publisher-only.
 
-**4. Never push `knowledge-graph/`, never rebuild/publish the KG.**
-The graph tree includes **hand-authored** community names that nothing regenerates.
-Two machines publishing destroys them silently. You *read* it in Cursor with the
-project **`kg` skill** (or ask the agent; under the hood: `.\scripts\kg_query.ps1`
-/ `kg_query.sh`).
+**4. Never publish `knowledge-graph/`, never rebuild the KG.**
+There are **102** hand-authored community names that nothing regenerates — and even
+our own rebuilds only carry ~**37–48%** across. Two machines publishing destroys them
+silently. You *read* the graph in Cursor with the project **`kg` skill** (or ask the
+agent; under the hood: `.\scripts\kg_query.ps1` / `kg_query.sh`).
 
 If you think a refresh is due, **file a request** and push that — do not rebuild:
 
@@ -156,6 +159,19 @@ If you think a refresh is due, **file a request** and push that — do not rebui
 bash ../knowledge-graph/kg_refresh.sh request "why you think so"
 ./data-push.sh --go
 ```
+
+✅ **The tool enforces this, and your normal pushes are unaffected.** On a contributor
+machine `data-push.sh --go` pushes every other root as usual; it only skips publishing
+the graph tree and still uploads `knowledge-graph/refresh_queue/` (your request
+mailbox). Expect a line like:
+
+```
+SKIPPED knowledge-graph/: 'groundtruth' holds the publisher baton; this machine is '<yours>'.
+  The graph and its names are publisher-only, so only refresh_queue/ is pushed from here.
+  This is expected on a contributor machine and is NOT an error.
+```
+
+That line is normal. Do not "fix" it or escalate it.
 
 **5. Shared ledgers are append-only.**
 `STATUS.md`, `TICKETS.md`, `FOLLOWUPS.md`, `TEST_MAP.md`, `CUSTOMER_GUIDANCE.md`.

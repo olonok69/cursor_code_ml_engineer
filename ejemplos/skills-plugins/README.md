@@ -26,10 +26,11 @@ Ejemplos en esta carpeta:
 - [`audit/SKILL.md`](./.cursor/skills/audit/SKILL.md) — npm (`package.json`); demo target: [`../../ex_npm/`](../../ex_npm/)
 - [`audit-python/SKILL.md`](./.cursor/skills/audit-python/SKILL.md) — Python (`requirements.txt`); demo target: [`../../ex_app/`](../../ex_app/)
 - [`deploy-staging/SKILL.md`](./.cursor/skills/deploy-staging/SKILL.md) — deploy gate; demo target: [`../../ex_staging/`](../../ex_staging/)
+- [`day/SKILL.md`](./.cursor/skills/day/SKILL.md) — start/end-of-day shared-record routine (read for shape; scripts in `metodologia/s3-sync/`)
 
 Live (workspace root): `.cursor/skills/` — ver [`DEMO_RUNBOOK.md`](../../DEMO_RUNBOOK.md).
 
-Pack de metodología: `kg`, `kg-refresh`, `methodology-plan`, `sanitise-diff` en
+Pack de metodología: `kg`, `kg-refresh`, `methodology-plan`, `sanitise-diff`, `day` en
 [`../../docs/ai-agents-code-methodology/cursor/skills/`](../../docs/ai-agents-code-methodology/cursor/skills/).
 
 ## 3. Slash commands de Claude — no hay copia 1:1

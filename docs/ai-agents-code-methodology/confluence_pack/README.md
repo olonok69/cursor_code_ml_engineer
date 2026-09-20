@@ -1,7 +1,9 @@
 # Cursor Confluence pack — adopt AI methodology + S3 shared record
 
-**Generated** by `build_confluence_pack.py`. **Do not hand-edit** `html/` or `xhtml/` —
-edit `sources/*.md` or `../TECHNICAL.md`, then regenerate.
+**Generated** by `build_confluence_pack.py` (last aligned **2026-09-10**: baton scoped
+to `knowledge-graph/`, `SKIPPED` + `refresh_queue/` exemption, queue `--clear` deletes
+bucket keys, 102 / 37–48% naming budget, pull caveat when unpushed). **Do not hand-edit**
+`html/` or `xhtml/` — edit `sources/*.md` or `../TECHNICAL.md`, then regenerate.
 
 ```bash
 cd docs/ai-agents-code-methodology/confluence_pack
