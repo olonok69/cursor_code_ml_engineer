@@ -13,7 +13,8 @@ surface (rules, skills, MCP, hooks).
 | [`REAL_EXAMPLE.md`](./REAL_EXAMPLE.md) | A concrete case (empty field) through the 11 stages. (Spanish: `EJEMPLO_REAL.md`.) |
 | [`tools.md`](./tools.md) | Prevalence: CodeGraph, Serena, Playwright, skill `kg`, oracles. (Spanish: `herramientas.md`.) |
 | [`machine-sync.md`](./machine-sync.md) | Ops runbook (tarball bring-up + evolution to S3); Cursor adaptation note at the top. |
-| [`../../docs/synchro/s3-sync/README.md`](../../docs/synchro/s3-sync/README.md) | Shared engineering record on S3 (sync vs mount, roles, identity). |
+| [`s3-sync/`](./s3-sync/) | Pointer to language-neutral scripts under `../metodologia/s3-sync/` (`config.env.example` only). |
+| [`../../docs/synchro/s3-sync/README.md`](../../docs/synchro/s3-sync/README.md) | Shared engineering record on S3 (sync vs mount, roles, identity, guard both directions). |
 | [`../../docs/KNOWLEDGE_GRAPH.md`](../../docs/KNOWLEDGE_GRAPH.md) | Ticket graph (graphify) — same scripts; skill `kg` in Cursor. |
 | [`../../docs/ai-agents-code-methodology/CURSOR_ADAPTATION.md`](../../docs/ai-agents-code-methodology/CURSOR_ADAPTATION.md) | Full adaptation pack. |
 | [`flow.png`](./flow.png) | Flow diagram. |

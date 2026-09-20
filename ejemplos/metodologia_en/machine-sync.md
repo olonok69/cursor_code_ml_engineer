@@ -214,9 +214,10 @@ operating model. The model matters more than the technology:
 | **Pairs must move together** | The names overlay is only meaningful against the graph it came from, but sync compares **object by object** → new graph + old names = names glued to the wrong community, **with no error**. Stamp the overlay with a **fingerprint of the graph** and make the health check fail loudly. |
 | **Coordinate without locks** | To request a rebuild, each contributor writes **their own file** in a queue (`refresh_queue/<utc>-<machine>.request`). Distinct keys never collide; a shared queue file would be lost to last-writer-wins. It is also the same contract a scheduled job will consume. |
 | ⚠️⚠️ **Recovery EXPIRES — and users own their own work** | Versioning almost always **expires noncurrent versions after 30 days**. Recoverable **for 30 days, and only if somebody notices**. Onboarding literal: *pull before you edit, push what you changed, and if something of yours disappears, say so within the month or it is gone.* |
-| **Shared ledgers are append-only** | Last-writer-wins with no merge: **rewriting one silently drops somebody else's line**. Add rows; never restructure someone else's. A pull-time warning has essentially no false positives — the **visibility** versioning does not give you. |
+| **Shared ledgers are append-only** | Last-writer-wins with no merge: **rewriting one silently drops somebody else's line**. Add rows; never restructure someone else's. A pull-time warning has essentially no false positives — the **visibility** versioning does not give you. ⚠️⚠️ **Guard BOTH directions**: that check covers pull; the damage happens on **push** (`exit 4` / `REFUSED`; do not reach for `--allow-clobber`). |
 | **The shared store wins on divergence** | *"I have it locally"* stops being an argument once someone else's version is the published one. Agree it **in advance**. |
 | **Each machine declares its identity** | See below: this is what is specific to working with agents. |
+| **Habit = `day` skill + scripts** | "Pull at start / push at end" needs a callable routine, not a paragraph: [`../skills-plugins/.cursor/skills/day/`](../skills-plugins/.cursor/skills/day/) + [`../metodologia/s3-sync/`](../metodologia/s3-sync/). |
 
 ### What is specific to agents: the machine has a role
 

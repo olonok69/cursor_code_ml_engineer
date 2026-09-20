@@ -308,8 +308,10 @@ rules, from the product UI. There is no `/plugin install` command.
 .cursor/skills/methodology-plan/SKILL.md
 ```
 Real project skill examples: [`ejemplos/skills-plugins/.cursor/skills/`](./ejemplos/skills-plugins/.cursor/skills/)
-(`audit`, `deploy-staging`). Methodology pack with the four skills above:
+(`audit`, `deploy-staging`, `day`). Methodology pack:
 [`docs/ai-agents-code-methodology/cursor/skills/`](./docs/ai-agents-code-methodology/cursor/skills/).
+
+⚠️ **The strongest reason to reach for a skill is not convenience — it is enforcement.** A rule that lives only in a runbook decays silently, and nobody can see it decaying. The `day` skill in that folder exists because "pull at the start, push at the end" sat in our operations doc **for months without being followed**; packaging it as a callable routine both executes it and leaves the record that makes a lapse visible. See §15B.
 
 > **Note (August 2026):** Skills, Marketplace, `.cursor/agents/` and `agent -p` are documented at
 > `docs.cursor.com`. If a row in [`ejemplos/README.md`](./ejemplos/README.md) looks stale, trust
@@ -734,8 +736,11 @@ own private index** of the same history. Full runbook:
 | **Pairs must move together** | The names overlay is only meaningful against the graph it came from, but sync compares **object by object** → new graph + old names = names glued to the wrong community, **with no error**. Stamp the overlay with a **fingerprint of the graph** and make the health check fail loudly. |
 | **Coordinate without locks** | To request a rebuild, each contributor writes **their own file** in a queue (`kg_refresh.sh request` → `refresh_queue/<utc>-<machine>.request`). Distinct keys never collide; a shared queue file would be lost to last-writer-wins. Same trigger contract a scheduled job can consume later. Single publisher is scaffolding, not architecture. |
 | ⚠️⚠️ **Recovery EXPIRES — and users own their own work** | Versioning is invariably called "the recovery net", full stop. Half-truth: it will almost always carry a lifecycle rule **expiring noncurrent versions after 30 days**. An overwrite is recoverable **for 30 days, and only if somebody notices**; nobody audits anyone else's files. Say it literally in onboarding: *pull before you edit, push what you changed, and if something of yours disappears, say so within the month or it is gone.* |
-| **Shared ledgers are append-only** | `STATUS.md`, `FOLLOWUPS.md`… Last-writer-wins with no merge: **rewriting one silently drops somebody else's line**, with no conflict and no error. Add rows; never restructure someone else's. Detection is cheap: a line present locally and absent from the incoming copy is either a deliberate deletion or a clobber → a pull-time warning has essentially no false positives. That is the **visibility** versioning does not give you: it makes the loss *recoverable*, not *noticed*. |
+| **Shared ledgers are append-only** | `STATUS.md`, `FOLLOWUPS.md`… Last-writer-wins with no merge: **rewriting one silently drops somebody else's line**, with no conflict and no error. Add rows; never restructure someone else's. Detection is cheap: a line present locally and absent from the incoming copy is either a deliberate deletion or a clobber → a pull-time warning has essentially no false positives. That is the **visibility** versioning does not give you: it makes the loss *recoverable*, not *noticed*. ⚠️⚠️ **We shipped exactly that check and still lost work** — see the next row. |
 | **The shared store wins on divergence** | *"I have it locally"* stops being an argument once someone else's version is the published one. Agree it **in advance** — the instinct runs the other way, because your copy is the one you can see. |
+| ⚠️⚠️ **Guard BOTH directions — a pull clobbers you, a push clobbers your colleague** | The pull-time check above is the one everybody builds, because it protects the person running it. It is **half the problem**. Measured: two machines edited the status ledger the same afternoon; the second push replaced the first wholesale — **11 lines gone, no conflict, no error, and nothing on the pushing machine looked wrong afterwards.** It went a day unnoticed. A pull can be made to warn *you*; a push destroys evidence on **a machine you never look at**. Guard the push too: before uploading a shared file, check whether the stored copy has moved since you last synced, and **refuse (exit 4 / `REFUSED`)** — do not warn, a warning in a 60-line preview is exactly what gets missed. Escape hatch: `--allow-clobber` — publish it *and* the reason not to use it. |
+| ⚠️ **A per-machine file needs exactly ONE writer, enforced in the tool** | Splitting a shared ledger into one file per machine removes the contention *by design* — and the tool can still break it. Ours uploaded **every** machine's file, including its permanently-stale copy of someone else's, silently rolling that person's record back. **The first symptom was not a corrupt file: it was a wrong conclusion about a person** — with his record erased, the dashboard said he had never closed his day. He had. Before concluding a teammate skipped a process step, check whether your own tooling ate the evidence. |
+| ⚠️ **A guard that cries wolf on day one teaches people to override it** | Our push guard first compared timestamps alone, and would have refused a teammate's very first push — on files he had just pulled and held byte-for-byte — because his log had no recorded real pull yet (old script, first day on a machine: both common). It now asks the question that matters: *would this upload actually change the stored object?* **A guard's false-positive rate is a safety property, not a UX nicety**: every spurious refusal spends credibility, and the override people learn to reach for (`--allow-clobber`) is the one that causes the incident. |
 
 **The agent-specific part — the machine has a role.** Once the same record is reachable
 from several machines with different permissions, the session must know **where it is and
@@ -747,11 +752,54 @@ reachable, mount present), and `AGENTS.md` **points at it**, so every session re
 role first. `IDENTITY.md` is the one file that must **not** be the same everywhere:
 gitignored, never synced, never packaged.
 
+**And the habit needs a mechanism, not a paragraph.** Everything above is a *rule*, and rules in a
+runbook decay silently. Ours did: "pull at the start, push at the end" sat in the operations doc
+**for months and was not happening** on the very machine that published. Nothing recorded a sync, so
+nothing could show the drift — the lapse was invisible even to the person lapsing.
+
+The fix was to package the two moments the shared record depends on into one callable routine —
+`day start` / `day end` — and to make it **role-aware**, reading the machine's identity card before
+it touches anything. Worked example:
+[`ejemplos/skills-plugins/.cursor/skills/day/SKILL.md`](./ejemplos/skills-plugins/.cursor/skills/day/SKILL.md);
+scripts (genericised but real):
+[`ejemplos/metodologia/s3-sync/`](./ejemplos/metodologia/s3-sync/). Start from `config.env.example`:
+that one file is where the design lives, and genericising the eleven scripts for this course changed
+**one line in one file** because everything environment-specific already lived in the config.
+
+Read it for the shape rather than the commands. Every dangerous step is gated behind a question it
+answers first — *is there unpublished local work? which files will this pull overwrite? may this
+machine publish the derived artifact?* — and where the answer is ambiguous it **stops and asks**
+instead of choosing. A routine that resolves the ambiguous case on its own is precisely the one that
+ends up destroying somebody else's work. The secondary benefit is the audit trail: once the routine
+records each sync, that record is what made the two failures above detectable at all.
+
 > **Before the first shared push:** scrub embedded credentials from the records. This is not
 > hypothetical — investigation notes capture signed URLs and tokens **on purpose**, as
 > evidence of a bug, and those are exactly the strings you don't want in shared storage. Run
 > the sanitisation scan (`sanitise-diff` skill) over the **whole** record, not over a
 > diff.
+
+> ⚠️⚠️ **A safety guard can silently disable the instrument that proves the habit.** We added a
+> pre-pull snapshot so a pull became reversible — a genuinely good guard — and it installed its own
+> `trap ... EXIT` to clean up a temp file. Bash keeps **one** EXIT trap, so it replaced the one that
+> wrote the sync activity log. The snapshot block runs only on the real (`--go`) path, so **dry runs
+> kept logging and every real pull went unrecorded for two days**, while the "last pull" column
+> stayed populated and entirely plausible.
+>
+> Two things generalise. First, **ask what else claims the same single-slot resource** when you add
+> a guard: the EXIT trap, `$?`, a `set -e` context. Second, **the real path and the rehearsal path
+> are different code paths, and only one of them gets exercised casually** — an instrument that
+> works in dry-run has not been tested.
+>
+> The isolation is worth copying too: a marker line appended to the log survived a real pull
+> **byte-identical**, which ruled out *"written then overwritten"* and proved *"never appended"*. A
+> line count could not have told those apart.
+
+> ⚠️ **Measure an optimisation before you quote it.** Restricting the sweep to the single directory
+> that changes daily was predicted to take the check "from two minutes to seconds". Measured:
+> **212s → 123s, about 40%** — most of the cost was *inside* that directory. An optimisation quoted
+> from intuition becomes a documented fact in one copy-paste, and then lands in onboarding. Measure
+> it once, write the number down, and date it.
 
 ---
 

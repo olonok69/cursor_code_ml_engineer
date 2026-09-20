@@ -46,3 +46,22 @@ Sanitise report
 ```
 
 Never skip because “this one looks clean.”
+
+---
+
+## ⚠️ Where the name list lives
+
+The blocklist itself is **client data**. Keeping it inline means the file whose job is to
+catch client names is the one file guaranteed to contain all of them — and that file gets
+copied into examples, pasted into tickets and shipped in onboarding packs.
+
+Keep the names in a **gitignored** side file (`.sanitise-names`, one name per line) and have
+the skill read it. The skill is then publishable; the list never leaves the machine.
+
+```bash
+# .gitignore
+.sanitise-names
+```
+
+Same reasoning as every other per-machine file in this methodology: the *mechanism* is
+shared, the *content* is not.

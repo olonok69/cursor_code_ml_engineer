@@ -213,9 +213,10 @@ modelo de operación. El modelo importa más que la tecnología:
 | **Los pares viajan juntos** | El overlay de nombres solo vale contra el grafo del que salió, pero el sync compara **objeto a objeto** → grafo nuevo + nombres viejos = nombres pegados a la comunidad equivocada, **sin error**. Sella el overlay con una **huella del grafo** y que el chequeo falle en ruidoso. |
 | **Coordinar sin locks** | Para pedir un rebuild, cada contribuidor escribe **su propio fichero** en una cola (`refresh_queue/<utc>-<máquina>.request`). Claves distintas nunca colisionan; un fichero de cola compartido se perdería por last-writer-wins. Es además el mismo contrato que consumirá un job programado. |
 | ⚠️⚠️ **La recuperación CADUCA — y cada uno responde de su trabajo** | El versionado casi siempre **expira las versiones no actuales a los 30 días**. Recuperable **30 días y solo si alguien se da cuenta**. Onboarding literal: *baja antes de editar, sube lo que cambiaste, y si desaparece algo tuyo, dilo dentro del mes o se ha ido.* |
-| **Los ledgers compartidos son de solo-append** | Last-writer-wins sin merge: **reescribir uno borra en silencio la línea de otra persona**. Añade filas; no reestructures las ajenas. Un aviso en el `pull` casi no tiene falsos positivos — es la **visibilidad** que el versionado no da. |
+| **Los ledgers compartidos son de solo-append** | Last-writer-wins sin merge: **reescribir uno borra en silencio la línea de otra persona**. Añade filas; no reestructures las ajenas. Un aviso en el `pull` casi no tiene falsos positivos — es la **visibilidad** que el versionado no da. ⚠️⚠️ **Protege AMBAS direcciones**: ese chequeo cubre el pull; el daño ocurre en el **push** (`exit 4` / `REFUSED`; no uses `--allow-clobber` a la ligera). |
 | **En divergencia manda el almacén compartido** | *"Yo lo tengo en local"* deja de ser argumento cuando la versión de otro es la publicada. Acuérdalo **antes**. |
 | **Cada máquina declara su identidad** | Ver abajo: es lo específico de trabajar con agentes. |
+| **Hábito = skill `day` + scripts** | "Pull al empezar / push al terminar" necesita una rutina invocable, no un párrafo: [`../skills-plugins/.cursor/skills/day/`](../skills-plugins/.cursor/skills/day/) + [`./s3-sync/`](./s3-sync/). |
 
 ### Lo específico de los agentes: la máquina tiene rol
 

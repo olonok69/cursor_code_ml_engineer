@@ -60,9 +60,10 @@ people rebuilding and pushing it will silently clobber each other.
 > It holds only while the rebuild is **lossless**. In practice the generated tree
 > also contains a **hand-authored** file — the curated community names — that
 > nothing regenerates. A rebuild re-derives the graph's internal identifiers from
-> scratch, so the names no longer attach to anything: measured on a real rebuild,
-> **under 1% of them survived**, and even after fixing the underlying cause only
-> ~38% carried across. Recreating them is an hour of judgement, not a command.
+> scratch, so the names no longer attach to anything: measured across real rebuilds,
+> pinning fixed dedup *within* a run but continuity *between* runs still only carried
+> ~**37–48%** of **~102** hand-authored names. Recreating them is judgement time, not
+> a command — budget re-labelling into every refresh.
 >
 > Nor is the graph "cheap to derive": a full rebuild is a fan-out of extraction
 > agents over the whole corpus.
@@ -121,7 +122,15 @@ A single shared queue file would hit the same last-writer-wins problem as everyt
 else here and silently drop requests. **Distinct keys never collide**, so a queue of
 one-file-per-request needs no coordination whatsoever. The publisher runs
 `kg_refresh.sh queue` before rebuilding and `queue --clear` after the health check
-passes.
+passes. **`--clear` must delete the consumed keys in the bucket** — a local-only
+archive leaves the originals in the store; the next pull resurrects them everywhere.
+
+**Baton scope.** The publisher baton gates **`knowledge-graph/` only**, not the whole
+push. Contributors upload ticket folders normally; without the baton they see
+`SKIPPED knowledge-graph/` (expected) and still push **`refresh_queue/`**. An earlier
+whole-sync gate blocked both ticket work and the request mailbox — a documented
+contributor loop that silently never left the machine. Before gating a path, enumerate
+what else lives under it.
 
 > **Treat the single publisher as scaffolding, not architecture.** Pinning the rebuild
 > to one person's machine stalls the moment that machine is off, travelling, or
@@ -130,6 +139,10 @@ passes.
 > contributors do** — the migration swaps the operator, not the interface. What still
 > blocks a fully unattended run is the judgement step: naming the clusters the rebuild
 > could not carry across.
+>
+> **Simulate the role before onboarding into it.** A second `MACHINE_NAME` + empty
+> tree exercises real scripts; a same-box simulation with the publisher's write
+> credentials is not a two-person proof.
 
 ---
 
@@ -185,8 +198,10 @@ files, and there is no backstop on day 31.
 
 State it plainly in onboarding rather than implying a safety net that thins out:
 
-> Pull before you edit. Push what you changed. If something of yours disappears, say so
-> within the month or it is gone.
+> Push what you changed. Prefer pull before you edit — but if you already have
+> **unpushed** local work, dry-run first: sync does not delete on the way in and will
+> overwrite newer local files with the store's older copy. If something of yours
+> disappears, say so within the month or it is gone.
 
 The alternative — a team that believes storage is durable in a way it is not — produces
 exactly one kind of incident, and it is unrecoverable by the time anyone reports it.
@@ -206,6 +221,40 @@ present locally and absent in the incoming copy is either a deliberate deletion 
 clobber — so a pull-time check that diffs the two and warns has essentially no false
 positives. A few lines of shell, not a merge engine. That check is the visibility that
 versioning does not give you: versioning makes the loss *recoverable*, not *noticed*.
+
+⚠️⚠️ **That check covers one direction, and the damage happens in the other.** We built it, it runs
+on every pull, and work was still destroyed. Measured: two machines edited the status ledger the
+same afternoon; the second push replaced the first wholesale — **11 lines gone, no conflict, no
+error.** A pull-time check cannot see this, because the loss occurs while *pushing*, against a
+copy the pusher never had.
+
+Put plainly: **a pull clobbers you, and you can be made to notice. A push clobbers your colleague,
+and you cannot** — the evidence sits on a machine you never look at. Ours went a full day
+unobserved, and was recovered only because bucket versioning happened to be on.
+
+So guard the push as well. Before uploading a shared file, compare the stored copy against the
+last real sync this machine recorded, and if the store has moved since, **refuse (`exit 4` /
+`REFUSED`)** — name the files and stop. Do not merely warn: a warning inside a 60-line transfer
+preview is exactly the thing that gets scrolled past. Provide `--allow-clobber`, document it, and
+document the reason not to use it in the same breath.
+
+Two refinements that turned out to matter more than the check itself:
+
+- **Compare content, not just timestamps.** The first version would have refused a teammate's very
+  first push after upgrading, on files he had just pulled and held byte-for-byte, because his log
+  had no real pull recorded yet. Ask the question that matters — *would this upload actually change
+  the stored object?* **A guard's false-positive rate is a safety property**: every spurious refusal
+  spends credibility, and the override people learn to reach for is the one that causes the
+  incident.
+- **A per-machine file needs exactly one writer, enforced in the tool.** Splitting the sync log into
+  one file per machine removes contention by design — and our push uploaded *every* machine's file,
+  including its permanently-stale copy of someone else's, rolling that person's record back. The
+  first symptom was not a corrupt file: with his log erased, the dashboard said he had never closed
+  his day. He had. **Before concluding a teammate skipped a process step, check whether your own
+  tooling ate the evidence.**
+
+Course scripts (genericised): [`ejemplos/metodologia/s3-sync/`](../../ejemplos/metodologia/s3-sync/).
+Routine that drives them: the Cursor [`day` skill](../../ejemplos/skills-plugins/.cursor/skills/day/SKILL.md).
 
 ### Per-task folders need no coordination at all
 

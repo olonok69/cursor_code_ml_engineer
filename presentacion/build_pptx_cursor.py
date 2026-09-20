@@ -1113,7 +1113,7 @@ def slide_30(prs):
     card(slide, 6.8, 2.0, 5.85, 2.55, "B · Día a día: registro sobre S3", [
         "Alcance estrecho: changes/**/*.md + grafo (nada de cliente)",
         "Escribe por sync; lee por mount de SOLO LECTURA",
-        "Dry-run por defecto; --delete opt-in (no borrar al compañero)",
+        "Dry-run por defecto; guardia en AMBAS direcciones (sin --delete también se pisa)",
         "UN solo publisher. \"Derivado\" es del fichero, no de la carpeta",
     ], GREEN, 1.65)
     card(slide, 0.7, 4.7, 11.95, 1.5,
