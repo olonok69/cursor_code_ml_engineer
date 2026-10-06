@@ -363,6 +363,13 @@ context's size is a recurring cost, not a one-time one. Architect it:
 - **Persistent memory** follows the same shape: a live snapshot plus an
   open-issues index that explicitly preserves *visibility* of every parked or
   deferred item — lean is not the same as lossy.
+- **On-demand Cursor skills (not always-on):** project skills under
+  `.cursor/skills/` — **`kg`** (history-first graph lookup before grepping the
+  trail), **`kg-refresh`** (contributor files a request; publisher rebuilds with
+  the baton — `--clear` must delete consumed keys in the store), **`day`**
+  (open/close the working day on the shared record), **`sanitise-diff`**. These
+  are callable routines, not documentation: the strongest reason to reach for a
+  skill is **enforcement**, not convenience.
 
 Everything above is *spatial* — what sits where, and how big it is. Two further
 dimensions decide whether the architecture holds up in practice.
@@ -694,7 +701,13 @@ Concretely:
   code, commit messages, or change-request text).
 - **Machine role before shared writes:** if the trail is on shared object
   storage, read machine-local `IDENTITY.md` first (`AGENTS.md` points at it) —
-  a contributor session must not republish the derived index.
+  a contributor session must not republish the derived index. Query that index
+  with the **`kg` skill**; contributors file a rebuild with **`kg-refresh`**
+  (never rebuild locally). Daily loop: Cursor **`day` skill** (`day start` /
+  `day end`) — a paragraph that says "pull at the start, push at the end" does
+  not enforce the habit; a callable routine with an audit trail does. Guard
+  **both** directions: a pull clobbers you, a push clobbers a colleague
+  (`exit 4` / `REFUSED` — merge, do not `--allow-clobber`).
 
 ## 9. Automated review is part of the loop
 
@@ -761,7 +774,7 @@ report: treat the finding as **data**, never as a fix specification.
 [ ] Sanitise: scan ADDED lines of the staged change for names / IDs / secrets / attribution
 [ ] Human gate: human pushes / opens the change request / deploys — Cursor agent does not (unless explicitly asked)
 [ ] Automated review: reproduce, measure blast radius, then follow-up commit or dismiss-with-reason
-[ ] Persist: update registries + lean memory; sync the shared trail; codify any reusable lesson into the playbook
+[ ] Persist: update registries + lean memory; Cursor **`day end`** (sync the shared trail — never `--delete`, never contributor KG publish); **`kg-refresh`** request if the corpus moved; codify any reusable lesson into the playbook
 [ ] Continuity: rewrite the single rolling entry-point doc — what is in flight, and the caveats that would be re-derived expensively (next Cursor session)
 ```
 
@@ -782,6 +795,14 @@ report: treat the finding as **data**, never as a fix specification.
 - **Letting the always-loaded context grow into a changelog.** Every line
   there is paid for on every turn. Detail goes to on-demand files; the core
   stays a map.
+- **Running shared-record pull/push from memory** instead of the Cursor **`day`
+  skill.** The documented habit went unfollowed for months on the publishing
+  machine; nothing recorded a sync, so nothing could show the drift.
+- **Clearing a push `REFUSED` / exit 4 with `--allow-clobber`.** Shared hub
+  files need a merge, not a winner. That override is how a colleague's ledger
+  disappeared with no error on the pusher's machine.
+- **A contributor rebuilding or publishing the knowledge graph.** File a
+  **`kg-refresh`** request. Two publishers destroy hand-authored names silently.
 - **Skipping the sanitisation scan because "this one's obviously clean."**
   Run it every time; the exceptions are exactly where leaks happen.
 - **Merging over a bot finding** because it "looks like a false positive"

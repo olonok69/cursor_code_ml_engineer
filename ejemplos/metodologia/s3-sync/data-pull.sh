@@ -15,6 +15,7 @@ source ./config.env
 [[ -r ./_config_check.sh ]] && source ./_config_check.sh
 # Per-machine append-only record of this run (2026-09-16). Never fails the sync.
 [[ -r ./_activity_log.sh ]] && source ./_activity_log.sh || true
+[[ -r ./_queue_reconcile.sh ]] && source ./_queue_reconcile.sh || true
 
 DRYRUN="--dryrun"
 DELETE=""
@@ -92,6 +93,24 @@ echo ">>> s3://$BUCKET/$PREFIX  ->  $LOCAL_DATA  (profile=$READ_PROFILE)"
 #
 # So: dry-run first, snapshot every local file the pull is about to replace, and print it.
 # A pull becomes reversible instead of destructive. Skip with --no-snapshot.
+# Every planned download as "<root>/<rel>" under LOCAL_DATA, one per line.
+# ⚠️ Not `grep 'download: s3://[^ ]+ to .*'`: that dropped every key with a space (2,737 of 6,129
+# keys on 2026-10-05), so those files were neither snapshotted nor collision-checked. Keys can
+# also contain " to ", so the split is the LAST " to " after which the
+# destination ends with the same relative path as the source.
+_planned_rels() {
+  awk -v pre="download: s3://$BUCKET/$PREFIX/" '
+    { i = index($0, pre); if (!i) next
+      x = substr($0, i + length(pre)); n = length(x); hit = ""
+      for (p = 1; p <= n - 3; p++) {
+        if (substr(x, p, 4) != " to ") continue
+        src = substr(x, 1, p - 1); dst = substr(x, p + 4)
+        rel = substr(src, index(src, "/") + 1)
+        if (length(dst) >= length(rel) && substr(dst, length(dst) - length(rel) + 1) == rel) hit = src
+      }
+      if (hit != "") print hit }' "$1"
+}
+
 SNAP=""
 if [[ -z "$DRYRUN" && "$SNAPSHOT" -eq 1 ]]; then
   SNAP="$LOCAL_DATA/_prepull/$(date -u +%Y%m%d-%H%M%S)"
@@ -119,23 +138,16 @@ if [[ -z "$DRYRUN" && "$SNAPSHOT" -eq 1 ]]; then
   mkdir -p "$SNAP"
   : > "$SNAP.list"
   _n=0
-  while IFS= read -r _dst; do
-    # ⚠️ aws prints the destination RELATIVE TO THIS SCRIPT'S DIRECTORY (e.g. "../STATUS.md"),
-    # not absolute. Stripping $LOCAL_DATA from that leaves the "../" intact, and the copy then
-    # lands OUTSIDE the snapshot directory — where the printed undo command will not find it.
-    # Caught by the canary on 2026-09-17; resolve to an absolute path first. `cd`+`pwd` rather
-    # than realpath/readlink -f, which are not portable to stock macOS.
-    case "$_dst" in /*) _abs="$_dst" ;; *) _abs="$PWD/$_dst" ;; esac
-    _dir="$(cd "$(dirname "$_abs")" 2>/dev/null && pwd)" || continue
-    _abs="$_dir/$(basename "$_abs")"
-    [[ -f "$_abs" ]] || continue                        # new file: nothing to lose
-    _rel="${_abs#$LOCAL_DATA/}"
-    [[ "$_rel" != "$_abs" ]] || continue                # outside LOCAL_DATA: not ours to snapshot
-    _dst="$_abs"
+  while IFS= read -r _rel; do
+    [[ -n "$_rel" ]] || continue
+    # Built from the S3 key, not from aws's printed destination: that is relative to this
+    # script's directory ("../STATUS.md"), which needed path resolution and broke on spaces.
+    _dst="$LOCAL_DATA/$_rel"
+    [[ -f "$_dst" ]] || continue                        # new file: nothing to lose
     mkdir -p "$SNAP/$(dirname "$_rel")" 2>/dev/null || continue
     cp -p "$_dst" "$SNAP/$_rel" 2>/dev/null || continue
     _n=$((_n+1)); echo "$_rel" >> "$SNAP.list"
-  done < <(grep -oE 'download: s3://[^ ]+ to .*$' "$_plan" | sed 's/.* to //')
+  done < <(_planned_rels "$_plan")
 
   if [[ "$_n" -gt 0 ]]; then
     echo "    ⚠️  $_n existing local file(s) will be REPLACED. Snapshot: $SNAP"
@@ -150,8 +162,9 @@ if [[ -z "$DRYRUN" && "$SNAPSHOT" -eq 1 ]]; then
   # Case-colliding keys: two S3 objects differing only in case map to ONE file on a
   # case-insensitive filesystem (APFS, the WSL/NTFS mount), so every pull picks a winner
   # at random. This destroyed a teammate's ticket doc on 2026-09-17.
-  _dupes="$(cut -d' ' -f1 <<<"$(grep -oE 'download: s3://[^ ]+ to .*$' "$_plan" | sed 's/.* to //')" \
-            | awk '{print tolower($0)}' | sort | uniq -d)"
+  # Whole relative path, lower-cased (the old `cut -d' ' -f1` would have flagged "a b.docx" and
+  # "a c.docx" as a collision once names with spaces reached this check).
+  _dupes="$(_planned_rels "$_plan" | awk '{print tolower($0)}' | sort | uniq -d)"
   if [[ -n "$_dupes" ]]; then
     echo "" >&2
     echo "⛔ CASE-COLLIDING FILES — two bucket objects differ only in capitalisation and map" >&2
@@ -197,4 +210,6 @@ for root in "${SYNC_ROOTS[@]}"; do
   unset filters pull_only
 done
 
+# After the sync: a consumed/ twin that just arrived retires the local copy (_queue_reconcile.sh).
+declare -f reconcile_refresh_queue >/dev/null 2>&1 && reconcile_refresh_queue "$DRYRUN"
 _act_status="ok"

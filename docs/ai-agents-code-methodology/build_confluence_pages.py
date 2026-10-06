@@ -192,8 +192,9 @@ PAGES = [
      ["7."],
      "Turning a personal trail into a team asset on shared object storage. Source versus "
      "derived versus authored-inside-derived; single-writer; pairs that must move together; "
-     "and the behavioural rules people break — starting with recovery having an expiry date. "
-     "Cursor reads machine-local IDENTITY.md via AGENTS.md before shared writes."),
+     "guard **both** directions (push clobbers a colleague); the Cursor **day** skill as the "
+     "habit, not a paragraph. Cursor reads machine-local IDENTITY.md via AGENTS.md before "
+     "shared writes."),
     ("05-handoff",       "Human gate, continuity, review, checklist",
      ["8.", "9.", "Per-task checklist", "Technical anti-patterns"],
      "One tool (Cursor): no product-to-product handoff. Session continuity + human gate on "

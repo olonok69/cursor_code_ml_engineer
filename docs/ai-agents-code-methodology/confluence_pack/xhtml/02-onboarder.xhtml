@@ -1,54 +1,63 @@
 <h2>Onboarder checklist (Cursor) — your side, not theirs</h2>
-<p><strong>Current as of 2026-09-10.</strong> Brings a new team member online as a <strong>contributor</strong>. They start in <strong>Cursor</strong> (Confluence joiner page + open the lambda repo). Hand them <strong>For new joiners (Cursor)</strong> and <strong><code>ils-s3-sync-YYYYMMDD.zip</code></strong> together.</p>
+<p><strong>Current as of 2026-10-05</strong> (re-walked end to end: a read-only joiner simulated from the pack). Brings a new team member online as a <strong>contributor</strong>. They start in <strong>Cursor</strong> (Confluence joiner page + open the lambda repo). Hand them <strong>For new joiners (Cursor)</strong> and <strong><code>ils-s3-sync-YYYYMMDD.zip</code></strong> together.</p>
 <p>Also read <strong>Shared record (S3 sync)</strong> if you have not — this checklist assumes it.</p>
 <hr/>
 <h3>⛔ Step 0 — the gate, and it is not yours</h3>
-<p><strong>Nothing below works until they hold the AWS access.</strong></p>
+<p><strong>Nothing below works until they hold the AWS access.</strong> Raise it for every new person as early as possible — the September request took about two weeks to land.</p>
 <ul>
-<li>Request text as sent: package file <code>_teammate_access_request.txt</code></li>
-<li>Rationale: <code>_entitlement_audit_20260904.md</code> (in the s3-sync zip)</li>
+<li>Template: package file <code>_teammate_access_request.txt</code> (the September text — change name and date)</li>
 </ul>
 <p>What was asked for, on account <strong>055622654641</strong> (nonprod):</p>
 <table><thead><tr><th>Permission set</th><th>Why</th></tr></thead><tbody><tr><td><code>DeveloperNonprod</code></td><td>reads the bucket; logs / lambda / sqs / eks / ecr for normal work</td></tr><tr><td><code>KnowledgeBaseS3</code></td><td>⚠️ <strong>the only role that can write <code>s3://ils-nonprod-knowledge-base</code></strong></td></tr></tbody></table>
 <p>Do <strong>not</strong> hand DevOps <code>poc-iam-policy.json</code> — access is SSO permission sets now.</p>
 <p><strong>Chase this before doing anything else.</strong></p>
+<h4>Step 0b — hand over on day one (none of these reach them any other way)</h4>
+<ul>
+<li>[ ] GitHub <strong><code>ils-tech</code></strong> org access + their SSH key — <code>pip install -r requirements.txt</code> pulls <code>ils-message-broker</code> over <code>git+ssh</code> and fails without it</li>
+<li>[ ] <strong><code>.sanitise-names</code></strong> (client-name blocklist) — never committed, synced or packed by design; the <code>sanitise-diff</code> skill aborts without it. Hand to hand</li>
+<li>[ ] An OpenAI key for their own <code>.env.test</code> (the default <code>pytest -q</code> needs none)</li>
+<li>[ ] A <strong>freshly built</strong> pack: run <code>./package.sh</code> the day you send it, send only the file it names, quote its <code>PACK_BUILD.txt</code> stamp, delete any older pack it warns about. Publish your day (<code>day end</code>) first so the bucket matches the pack</li>
+</ul>
 <hr/>
 <h3>Step 1 — Cursor from day one (say this out loud)</h3>
 <ol>
-<li>They install <strong>Cursor</strong> and open <strong><code>document-parser-lambda</code></strong> as the workspace (so <code>AGENTS.md</code> + <code>.cursor/rules</code> + skills load).</li>
+<li>They install <strong>Cursor</strong>, clone the repo, unzip the pack into <code>data/changes/</code>, and <strong>copy <code>AGENTS.md</code> and <code>.cursor/</code> from <code>_pack_extras/</code> into the repo root</strong> — both are gitignored and are not in the clone. Then they open <strong><code>document-parser-lambda</code></strong> as the workspace.</li>
 <li>You give them Confluence <strong>For new joiners</strong> <strong>and</strong> <code>ils-s3-sync-YYYYMMDD.zip</code> in the same breath — zip is required for sync scripts, not an optional extra.</li>
 <li>Machine role: <code>IDENTITY.md</code> via <code>AGENTS.md</code> — contributor never publishes the KG.</li>
 <li>Human gate: agent does not push / open-merge PRs / deploy unless they explicitly ask in that session.</li>
-<li>KG query = Cursor <strong><code>kg</code> skill</strong> / <code>scripts/kg_query.ps1</code>. Refresh = file a <code>kg_refresh.sh request</code> only (publisher owns rebuild).</li>
+<li>Daily loop = Cursor <strong><code>day</code> skill</strong> (<code>day start</code> / <code>day end</code>) — not raw <code>data-pull</code> / <code>data-push</code> from memory. A page cannot enforce the habit.</li>
+<li>KG query = Cursor <strong><code>kg</code> skill</strong> / <code>bash data/knowledge-graph/kg_query.sh</code> (full queries need a Python 3.10+ graphify venv — joiner page § 4). Refresh = Cursor <strong><code>kg-refresh</code></strong> (files a request) / <code>kg_refresh.sh request</code> only (publisher owns rebuild).</li>
 </ol>
 <blockquote><p>⚠️⚠️ <strong><code>KnowledgeBaseS3</code> does not distinguish <code>knowledge-graph/</code> from <code>changes/</code>.</strong> A contributor <em>can</em> overwrite the KG. Single-writer is <strong>baton + convention</strong>, not IAM. Say this out loud.</p>
-<p>The baton gate in <code>data-push.sh</code> is <strong>scoped to <code>knowledge-graph/</code> only</strong> (as of 2026-09-10). Contributors push ticket folders normally; the gate skips publishing the graph and still allows <code>refresh_queue/</code>. Expect them to see a <strong><code>SKIPPED knowledge-graph/</code></strong> line — that is success, not a failure.</p></blockquote>
+<p>The baton gate in <code>data-push.sh</code> is <strong>scoped to <code>knowledge-graph/</code> only</strong> (as of 2026-09-10). Contributors push ticket folders normally; the gate skips publishing the graph and still allows <code>refresh_queue/</code>. On <code>--go</code> expect <em>&quot;knowledge-graph/: &#x27;groundtruth&#x27; holds the publisher baton … NOT an error&quot;</em> — that is success, not a failure.</p></blockquote>
 <hr/>
 <h3>Step 2 — decide write posture before they configure</h3>
-<table><thead><tr><th>Posture</th><th><code>config.env</code></th><th>They can</th></tr></thead><tbody><tr><td><strong>Read-only start</strong> (recommended day 1)</td><td><code>READ_PROFILE=&quot;dev-nonprod&quot;</code></td><td>pull, ledger check, read baton — never write</td></tr><tr><td><strong>Full contributor</strong></td><td><code>PROFILE=&quot;kb-s3&quot;</code></td><td>above + push their own ticket folders + refresh requests</td></tr></tbody></table>
+<table><thead><tr><th>Posture</th><th><code>config.env</code></th><th>They can</th></tr></thead><tbody><tr><td><strong>Read-only start</strong> (recommended day 1)</td><td>uncomment <code>READ_PROFILE=&quot;dev-nonprod&quot;</code></td><td>pull, ledger check, read baton — never write. <code>validate.sh</code> → <strong>READY (read-only)</strong></td></tr><tr><td><strong>Full contributor</strong></td><td><code>PROFILE=&quot;kb-s3&quot;</code> (template default)</td><td>above + push their own ticket folders + refresh requests</td></tr></tbody></table>
 <hr/>
 <h3>Step 3 — their setup, per machine</h3>
 <ol>
-<li><strong>AWS SSO</strong> — start URL <code>https://ils-provision.awsapps.com/start/</code>, sso-region <code>us-east-1</code>. <code>aws sts get-caller-identity</code> must show <strong>055622654641</strong>.</li>
-<li><strong>Tooling</strong> — AWS CLI v2 + mountpoint-s3 (from the package <code>mount-s3.deb</code> on x86_64 Ubuntu/WSL).</li>
-<li><strong>Copy <code>s3-sync/</code></strong>, edit <code>config.env</code>:</li>
+<li><strong>AWS SSO</strong> — the exact <code>~/.aws/config</code> block on the joiner page § 3 (profiles <code>dev-nonprod</code> and <code>kb-s3</code>, sso-session <code>ils</code>). <code>aws sts get-caller-identity --profile dev-nonprod</code> must show <strong>055622654641</strong>.</li>
+<li><strong>Tooling</strong> — AWS CLI v2 + python3. mountpoint-s3 is optional (<code>mount-s3.deb</code>, x86_64 Ubuntu/WSL only; skip on a Mac).</li>
+<li><strong>Unzip the pack into <code>&lt;repo&gt;/data/changes/</code></strong> (<code>mkdir -p data/changes</code> first — a fresh clone has no <code>data/</code>), then <code>cp templates/config.corporate.env config.env</code>. Bucket / profile / region / prefix are pre-filled; they edit:</li>
 </ol>
-<table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td><code>LOCAL_DATA</code></td><td>absolute path to <strong>their</strong> <code>document-parser-lambda/data</code></td></tr><tr><td><code>MACHINE_NAME</code></td><td>distinctive — appears in baton / refresh queue</td></tr><tr><td><code>MACHINE_ROLE</code></td><td>⚠️ <strong><code>contributor</code></strong></td></tr><tr><td><code>PROFILE</code> / <code>READ_PROFILE</code></td><td>per Step 2</td></tr></tbody></table>
+<table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td><code>LOCAL_DATA</code></td><td>absolute path to <strong>their</strong> <code>document-parser-lambda/data</code></td></tr><tr><td><code>MACHINE_NAME</code></td><td>distinctive — appears in baton / refresh queue</td></tr><tr><td><code>MACHINE_ROLE</code></td><td>⚠️ <strong><code>contributor</code></strong> (template default)</td></tr><tr><td><code>READ_PROFILE</code></td><td>per Step 2</td></tr></tbody></table>
 <ol>
 <li><strong><code>./identity.sh --write</code></strong> → confirm <strong>CONTRIBUTOR</strong>. This is what a <strong>Cursor</strong> session must read (via <code>AGENTS.md</code>) so it does not publish the KG.</li>
 <li><strong><code>./validate.sh</code></strong> → <code>MACHINE READY ✅</code> (read-only denial is OK when expected).</li>
-<li><strong>First pull:</strong> <code>./data-pull.sh</code> then <code>./data-pull.sh --go</code> (~888 MiB).</li>
+<li><strong>First pull:</strong> <code>./data-pull.sh</code> then <code>./data-pull.sh --go</code> (~1.2 GiB). Their first sync is a <strong>pull, never a push</strong> — before it, a push dry run lists the pack&#x27;s own files as if they were their work. After that they use <strong><code>day start</code></strong> / <strong><code>day end</code></strong> in Cursor.</li>
 </ol>
 <hr/>
-<h3>Step 4 — teach the five rules (10 minutes)</h3>
+<h3>Step 4 — teach the rules (10 minutes)</h3>
 <ol>
 <li>⚠️⚠️ Recovery expires at <strong>30 days</strong> — own your own work; push what you changed; pull before edit <strong>unless</strong> you have unpushed work (dry-run first).</li>
 <li>Write via sync, read via mount (<code>~/s3-ils-data</code> read-only on purpose).</li>
-<li>Pull at start → work locally → push at end. One owner per ticket folder.</li>
+<li><strong><code>day start</code> → work locally → <code>day end</code>.</strong> One owner per ticket folder. Documentation of pull/push does not enforce this; the skill does.</li>
 <li>Never <code>--delete</code> (publisher-only).</li>
-<li>Never <strong>publish</strong> <code>knowledge-graph/</code> / never rebuild KG; file <code>kg_refresh.sh request</code> instead. <strong><code>SKIPPED knowledge-graph/</code></strong> on push is expected; <code>refresh_queue/</code> still goes up. Names: <strong>102</strong> authored; ~<strong>37–48%</strong> survive a rebuild — refresh is a naming budget, not free.</li>
+<li>Never <strong>publish</strong> <code>knowledge-graph/</code> / never rebuild KG; <strong><code>kg-refresh</code></strong> files a request (by hand from <code>s3-sync/</code>: <code>bash ../../knowledge-graph/kg_refresh.sh request &quot;why&quot;</code>). The <em>&quot;holds the publisher baton … NOT an error&quot;</em> line on push is expected; <code>refresh_queue/</code> still goes up. Names: <strong>115</strong> authored (2026-10-02); a rebuild keeps a third to a half — refresh is a naming budget, not free.</li>
+<li><strong>Record conventions:</strong> one main doc per ticket, <code>sst-nnnn/sst-nnnn.md</code>, <strong>lowercase</strong> (the KG indexes it); QA evidence in <code>sst-nnnn/qa_review_N/</code>; a follow-up is a <code>FOLLOWUPS.md</code> entry — agents never open Jira tickets.</li>
+<li>⚠️⚠️ <strong>Guard BOTH directions.</strong> A pull clobbers them; a push clobbers a colleague and nothing on their machine looks wrong. <strong>Exit 4 / <code>REFUSED</code></strong> is not noise — merge the hub file; do not teach <code>--allow-clobber</code>.</li>
 </ol>
-<p><strong>Append-only ledgers</strong> — add rows only; <code>ledger_check.sh</code> warns on pull.</p>
+<p><strong>Append-only ledgers</strong> — add rows only; <code>ledger_check.sh</code> warns on pull; the push guard <strong>refuses</strong> when a hub file moved in the bucket.</p>
 <hr/>
 <h3>Step 5 — prove the round trip (acceptance test)</h3>
 <blockquote><p>▶▶ <strong>Two-machine § of <code>GO_LIVE_CHECKLIST</code> may never have been run with two real people.</strong> A simulated contributor (second <code>MACHINE_NAME</code> + <code>dev-nonprod</code> read) can exercise baton + queue paths, but writes may still use the publisher&#x27;s <code>kb-s3</code> credentials. A second person joining <strong>is</strong> the full acceptance test — treat it as one and record the result.</p></blockquote>
@@ -56,17 +65,18 @@
 <ul>
 <li>[ ] <code>./identity.sh</code> → <strong>CONTRIBUTOR</strong></li>
 <li>[ ] <code>./data-pull.sh --go</code> completes</li>
-<li>[ ] <code>python3 &lt;their data&gt;/knowledge-graph/kg_labels.py check</code> → <strong>0 unnamed, 0 lost</strong>, no fingerprint mismatch (graph + labels arrived as a <strong>matched pair</strong>; expect <strong>102/102</strong> matched on a healthy pull)</li>
-<li>[ ] In <strong>Cursor</strong>, KG query for a known ticket returns a community <strong>name</strong>, not a bare integer (proves hand-authored labels survived)</li>
-<li>[ ] Their first <code>./data-push.sh --go</code> shows <strong><code>SKIPPED knowledge-graph/</code></strong> (expected) and still pushes ticket work</li>
+<li>[ ] <code>python3 &lt;their data&gt;/knowledge-graph/kg_labels.py check</code> → <strong>0 unnamed, 0 lost</strong>, no fingerprint mismatch (graph + labels arrived as a <strong>matched pair</strong>; expect <strong>115/115</strong> matched on a healthy pull, as of 2026-10-02)</li>
+<li>[ ] In <strong>Cursor</strong>, KG query (<code>kg</code> skill) for a known ticket returns a community <strong>name</strong>, not a bare integer (proves hand-authored labels survived)</li>
+<li>[ ] Their first <code>./data-push.sh --go</code> shows the <em>&quot;holds the publisher baton … NOT an error&quot;</em> line (expected) and still pushes ticket work</li>
+<li>[ ] They can run <strong><code>day start</code></strong> in Cursor after the first pull (skill present under <code>.cursor/skills/day/</code>)</li>
 </ul>
 <p>Contributor loop:</p>
 <ul>
-<li>[ ] They create <code>changes/sst-SANDBOX/notes.md</code> → <code>./data-push.sh --go</code></li>
+<li>[ ] They create <code>changes/_sandbox_&lt;their-machine&gt;/notes.md</code> → <code>./data-push.sh --go</code> (not <code>sst-*</code>: that pattern is indexed by the KG)</li>
 <li>[ ] You pull on publisher and see it</li>
-<li>[ ] They <code>kg_refresh.sh request &quot;smoke test&quot;</code> → push; you see queue with <strong>their</strong> machine name (<code>refresh_queue/</code> must not be baton-blocked)</li>
-<li>[ ] <code>kg_refresh.sh queue --clear</code> → push → both sides empty (<code>--clear</code> must <strong>delete the consumed keys in the bucket</strong>, not only archive locally — otherwise the next pull resurrects the request everywhere)</li>
-<li>[ ] They delete sandbox and push — <code>--delete</code> stays with publisher</li>
+<li>[ ] They <code>kg_refresh.sh request &quot;smoke test&quot;</code> (or Cursor <strong><code>kg-refresh</code></strong>) → push; you see queue with <strong>their</strong> machine name (<code>refresh_queue/</code> must not be baton-blocked)</li>
+<li>[ ] <code>kg_refresh.sh queue --clear</code> → push → both sides empty. ⚠️ As of 2026-10-05 consumed requests can survive in the bucket and come back on every pull (4 did; removed by hand). If they reappear, the publisher removes those bucket keys.</li>
+<li>[ ] The <strong>publisher</strong> removes the sandbox folder at the end (<code>--delete</code> is publisher-only)</li>
 </ul>
 <hr/>
 <h3>Step 6 — methodology adoption (Cursor)</h3>
@@ -75,6 +85,7 @@
 <li>[ ] They can open Plan mode and state the output contract (<code>get-sl-upload-status</code>)</li>
 <li>[ ] They know: canary instruments; assert on member lists not totals; human gate</li>
 <li>[ ] <code>sanitise-diff</code> skill (or equivalent) before code leaves the workbench</li>
+<li>[ ] <strong><code>day</code> skill</strong> — they open with <code>day start</code> and close with <code>day end</code></li>
 <li>[ ] Session continuity: rolling entry-point rewritten at end of day</li>
 </ul>
 <hr/>
@@ -86,6 +97,8 @@
 <li><code>aws s3 --include</code> is case-sensitive.</li>
 <li>Sync walks the whole tree before filters — use <code>SYNC_ROOTS</code>, not raw <code>data/</code>.</li>
 <li>Gate a path → enumerate what else lives under it (<code>refresh_queue/</code> inside <code>knowledge-graph/</code> was the classic trap).</li>
+<li>Exit 4 / <code>REFUSED</code> on push is a <strong>merge</strong>, not a winner. <code>--allow-clobber</code> is how the 2026-09-18 ledger loss happened.</li>
+<li>A per-machine activity file has <strong>one writer</strong>. If the dashboard says someone never closed their day, check whether <em>your</em> tooling ate the evidence.</li>
 </ul>
 <hr/>
 <h3>Confirm they are productive</h3>
@@ -94,7 +107,7 @@
 <li>[ ] They can pull and see tickets + KG</li>
 <li>[ ] Round trip proven (Step 5)</li>
 <li>[ ] KG query works in <strong>Cursor</strong></li>
-<li>[ ] They know 30-day rule, append-only ledgers, <code>--delete</code> is not theirs, <strong><code>SKIPPED knowledge-graph/</code></strong> is normal</li>
-<li>[ ] They use <strong>Cursor</strong> from day one (repo open; <code>AGENTS.md</code> loads)</li>
+<li>[ ] They know 30-day rule, append-only ledgers, <code>--delete</code> is not theirs, the publisher-baton line on push is normal, <strong>exit 4</strong> means merge</li>
+<li>[ ] They use <strong>Cursor</strong> from day one (repo open; <code>AGENTS.md</code> loads) and <strong><code>day start</code> / <code>day end</code></strong></li>
 <li>[ ] They received <strong><code>ils-s3-sync-YYYYMMDD.zip</code></strong> with the Confluence joiner page</li>
 </ul>

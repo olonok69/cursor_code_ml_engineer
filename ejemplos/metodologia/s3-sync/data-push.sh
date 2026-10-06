@@ -15,6 +15,7 @@ source ./config.env
 [[ -r ./_config_check.sh ]] && source ./_config_check.sh
 # Per-machine append-only record of this run (2026-09-16). Never fails the sync.
 [[ -r ./_activity_log.sh ]] && source ./_activity_log.sh || true
+[[ -r ./_queue_reconcile.sh ]] && source ./_queue_reconcile.sh || true
 
 DRYRUN="--dryrun"
 DELETE=""
@@ -149,7 +150,22 @@ trap _act_finish EXIT
 if [[ -n "$DRYRUN" ]]; then
   echo ">>> DRY RUN (nothing uploaded). Re-run with --go to apply."
 fi
-echo ">>> $LOCAL_DATA  ->  s3://$BUCKET/$PREFIX  (profile=$PROFILE, machine=$MACHINE_NAME)"
+# A dry run only lists and compares, so it needs READ access only. Using the write profile for it
+# made `/day start` (which opens with a push dry run) exit 255 on a read-only joiner's first day
+# (joiner review 2026-10-05). A real push still uses PROFILE and fails loudly without write.
+SYNC_PROFILE="$PROFILE"
+[[ -n "$DRYRUN" ]] && SYNC_PROFILE="${READ_PROFILE:-$PROFILE}"
+
+# Portable md5: Linux has md5sum, stock macOS has `md5 -q`. Without a fallback the hub guard
+# below could not prove a file identical on a Mac and refused pushes of files we had just pulled.
+_md5() {
+  if command -v md5sum >/dev/null 2>&1; then md5sum "$1" 2>/dev/null | awk '{print $1}'
+  elif command -v md5 >/dev/null 2>&1; then md5 -q "$1" 2>/dev/null
+  else python3 -c "import hashlib,sys;print(hashlib.md5(open(sys.argv[1],'rb').read()).hexdigest())" "$1" 2>/dev/null
+  fi
+}
+
+echo ">>> $LOCAL_DATA  ->  s3://$BUCKET/$PREFIX  (profile=$SYNC_PROFILE, machine=$MACHINE_NAME)"
 
 # ─── Overwrite guard for shared hub files (2026-09-19) ──────────────────────────────
 #
@@ -203,7 +219,7 @@ hub_overwrite_guard() {
   if [[ ${LEDGERS[@]+set} == set ]]; then hubs+=( "${LEDGERS[@]}" ); fi
   hubs+=( "changes/SHARP_EDGES.md" )
   local p
-  for p in "$LOCAL_DATA"/changes/_PENDING_*.md; do
+  for p in "$LOCAL_DATA"/changes/_PENDING_*.md "$LOCAL_DATA"/changes/_RESUME_*.md; do
     if [[ -e "$p" ]]; then hubs+=( "changes/$(basename "$p")" ); fi
   done
 
@@ -212,7 +228,7 @@ hub_overwrite_guard() {
   for rel in "${hubs[@]}"; do
     [[ -f "$LOCAL_DATA/$rel" ]] || continue          # not ours to push
     head="$(aws s3api head-object --bucket "$BUCKET" --key "$PREFIX/$rel" \
-              --profile "$PROFILE" --region "$REGION" \
+              --profile "$SYNC_PROFILE" --region "$REGION" \
               --query '[LastModified,ETag]' --output text 2>/dev/null || true)"
     if [[ -z "$head" ]]; then continue; fi                    # absent in the bucket: nothing to lose
     bm="$(awk '{print $1}' <<<"$head")"
@@ -230,7 +246,7 @@ hub_overwrite_guard() {
     # ETag is the md5 for a single-part upload; a multipart one contains "-", and there we
     # fall back to the timestamp because we cannot cheaply compare.
     if [[ "$etag" != *-* ]]; then
-      lmd5="$(md5sum "$LOCAL_DATA/$rel" 2>/dev/null | awk '{print $1}')"
+      lmd5="$(_md5 "$LOCAL_DATA/$rel")"
       if [[ -n "$lmd5" && "$lmd5" == "$etag" ]]; then continue; fi   # identical: nothing to lose
     fi
     collided+=( "$rel  (bucket $bm  >  our last sync $since)" )
@@ -269,6 +285,8 @@ fi
 # any --exclude, so pointing it at data/ pays for 20k node_modules files it will never
 # upload. Walking only the roots in scope keeps purely-local trees free. JUNK_ARGS still
 # runs last as the backstop for junk that lives INSIDE a synced root.
+# Before the sync, so an already-consumed request is not pushed back (_queue_reconcile.sh).
+declare -f reconcile_refresh_queue >/dev/null 2>&1 && reconcile_refresh_queue "$DRYRUN"
 KG_RESTRICTED=0
 for root in "${SYNC_ROOTS[@]}"; do
   # ⚠️ A contributor is blocked from publishing the GRAPH, never from the refresh QUEUE.
@@ -281,7 +299,7 @@ for root in "${SYNC_ROOTS[@]}"; do
   if [[ "$root" == "knowledge-graph" ]] && ! kg_push_allowed; then
     echo ">>> $root  (refresh_queue/ only — the publisher owns the rest)"
     aws s3 sync "$LOCAL_DATA/$root" "s3://$BUCKET/$PREFIX/$root" \
-      --profile "$PROFILE" --region "$REGION" \
+      --profile "$SYNC_PROFILE" --region "$REGION" \
       --exclude "*" --include "refresh_queue/*" "${JUNK_ARGS[@]}" \
       $DRYRUN | tee -a "$ACTLOG"
     KG_RESTRICTED=1
@@ -318,7 +336,7 @@ for root in "${SYNC_ROOTS[@]}"; do
 
   echo ">>> $root"
   aws s3 sync "$LOCAL_DATA/$root" "s3://$BUCKET/$PREFIX/$root" \
-    --profile "$PROFILE" --region "$REGION" \
+    --profile "$SYNC_PROFILE" --region "$REGION" \
     ${filters[@]+"${filters[@]}"} "${JUNK_ARGS[@]}" \
     ${push_only[@]+"${push_only[@]}"} \
     $DELETE $DRYRUN | tee -a "$ACTLOG"

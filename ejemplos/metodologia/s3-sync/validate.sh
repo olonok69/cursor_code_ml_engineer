@@ -29,23 +29,38 @@ info(){ printf '        %s\n' "$1"; }
 # explicitly only for a machine that is deliberately read-only.
 WRITE_EXPECTED="${WRITE_EXPECTED:-1}"
 
+# Reads use READ_PROFILE (config.env; defaults to PROFILE). A read-only joiner has only
+# the read-only role on day one, sets READ_PROFILE to that profile, and must get a READY verdict
+# for the read path. Until 2026-10-05 every check here used PROFILE, so that joiner saw
+# "NOT READY" with 3 failures although pull worked (joiner review 2026-10-05).
+READ_PROFILE="${READ_PROFILE:-$PROFILE}"
+# Leniency applies ONLY to a machine that declares a separate read profile AND whose write
+# profile does not resolve at all (role not granted / profile not configured yet). A machine
+# with one profile (the publisher) keeps the strict path: a write failure is a FAIL.
+WRITE_PROFILE_OK=1
+if [[ "$READ_PROFILE" != "$PROFILE" ]] \
+   && ! aws sts get-caller-identity --profile "$PROFILE" >/dev/null 2>&1; then
+  WRITE_PROFILE_OK=0
+fi
+
 HOST="$(hostname -s 2>/dev/null || echo unknown)"
 KEY="$PREFIX/_validate/$HOST/probe-$$.txt"
 TMP="$(mktemp)"; RB="$(mktemp)"
 trap 'rm -f "$TMP" "$RB"' EXIT
 printf 'validate %s\n' "$HOST" > "$TMP"
 
-echo "=== validating on host '$HOST' against s3://$BUCKET/$PREFIX (profile=$PROFILE) ==="
+echo "=== validating on host '$HOST' against s3://$BUCKET/$PREFIX (read=$READ_PROFILE, write=$PROFILE) ==="
 
 # 1. tooling present
 command -v aws  >/dev/null && ok "aws CLI present ($(aws --version 2>&1 | cut -d' ' -f1))" || bad "aws CLI missing"
 
 # 2. identity + account
-IDENT="$(aws sts get-caller-identity --profile "$PROFILE" --query 'Account' --output text 2>&1)"
+IDENT="$(aws sts get-caller-identity --profile "$READ_PROFILE" --query 'Account' --output text 2>&1)"
 if [[ "$IDENT" =~ ^[0-9]{12}$ ]]; then ok "AWS identity OK (account $IDENT)"; else bad "AWS identity failed: $IDENT"; fi
 
 # 3. object put / list / get / delete
-if aws s3 cp "$TMP" "s3://$BUCKET/$KEY" --profile "$PROFILE" --region "$REGION" >/dev/null 2>&1; then
+if [[ "$WRITE_PROFILE_OK" -eq 1 ]] \
+   && aws s3 cp "$TMP" "s3://$BUCKET/$KEY" --profile "$PROFILE" --region "$REGION" >/dev/null 2>&1; then
   ok "PutObject"
   aws s3 ls "s3://$BUCKET/$PREFIX/_validate/$HOST/" --profile "$PROFILE" >/dev/null 2>&1 \
     && ok "ListObjects" || bad "ListObjects"
@@ -54,8 +69,11 @@ if aws s3 cp "$TMP" "s3://$BUCKET/$KEY" --profile "$PROFILE" --region "$REGION" 
   aws s3 rm "s3://$BUCKET/$KEY" --profile "$PROFILE" --region "$REGION" >/dev/null 2>&1 \
     && ok "DeleteObject (cleaned up)" || bad "DeleteObject (LEFTOVER: s3://$BUCKET/$KEY)"
 else
-  if [[ "$WRITE_EXPECTED" == "1" ]]; then
-    bad "PutObject — check the IAM policy (poc-iam-policy.json)."
+  if [[ "$WRITE_PROFILE_OK" -eq 0 ]]; then
+    skip "PutObject — write profile '$PROFILE' not usable yet (write role not granted or not logged in); read-only until it is"
+    skip "DeleteObject — not attempted (no write profile)"
+  elif [[ "$WRITE_EXPECTED" == "1" ]]; then
+    bad "PutObject — profile '$PROFILE' cannot write. It must be the role with bucket write; re-login first: aws sso login"
   else
     skip "PutObject denied — expected: this profile is read-only (see config.env header)"
     skip "DeleteObject — not attempted (write denied)"
@@ -63,12 +81,16 @@ else
   # The read path is what a read-only machine actually depends on, so validate it
   # instead of skipping every remaining check. Previously a write denial aborted
   # the whole block and the machine was never read-tested at all.
-  aws s3 ls "s3://$BUCKET/$PREFIX/" --profile "$PROFILE" >/dev/null 2>&1 \
+  aws s3 ls "s3://$BUCKET/$PREFIX/" --profile "$READ_PROFILE" >/dev/null 2>&1 \
     && ok "ListObjects (read path)" || bad "ListObjects (read path)"
-  FIRST_KEY="$(aws s3 ls "s3://$BUCKET/$PREFIX/" --recursive --profile "$PROFILE" 2>/dev/null \
-                 | awk '$3 > 0 {print $4; exit}')"
+  # s3api, not `s3 ls | awk '{print $4}'`: that split a key with spaces at the first space and
+  # then fetched a key that does not exist (2,737 of 6,129 keys contain spaces, 2026-10-05).
+  FIRST_KEY="$(aws s3api list-objects-v2 --bucket "$BUCKET" --prefix "$PREFIX/changes/" \
+                 --max-items 50 --profile "$READ_PROFILE" --region "$REGION" \
+                 --query 'Contents[?Size > `0`].Key | [0]' --output text 2>/dev/null | head -n 1)"
+  [[ "$FIRST_KEY" == "None" ]] && FIRST_KEY=""
   if [[ -n "$FIRST_KEY" ]]; then
-    aws s3 cp "s3://$BUCKET/$FIRST_KEY" "$RB" --profile "$PROFILE" --region "$REGION" >/dev/null 2>&1 \
+    aws s3 cp "s3://$BUCKET/$FIRST_KEY" "$RB" --profile "$READ_PROFILE" --region "$REGION" >/dev/null 2>&1 \
       && [[ -s "$RB" ]] \
       && ok "GetObject (read path, fetched an existing object)" || bad "GetObject (read path)"
   else
@@ -82,7 +104,7 @@ if command -v mount-s3 >/dev/null 2>&1; then
   # live read-only mount round-trip (needs at least one object under the prefix)
   mkdir -p "$MOUNT_DIR"
   if mountpoint -q "$MOUNT_DIR"; then fusermount3 -u "$MOUNT_DIR" 2>/dev/null; fi
-  if mount-s3 "$BUCKET" "$MOUNT_DIR" --profile "$PROFILE" --region "$REGION" \
+  if mount-s3 "$BUCKET" "$MOUNT_DIR" --profile "$READ_PROFILE" --region "$REGION" \
         --prefix "$PREFIX/" --read-only >/dev/null 2>&1; then
     ls "$MOUNT_DIR" >/dev/null 2>&1 && ok "read-only mount lists" || bad "mount present but cannot list"
     fusermount3 -u "$MOUNT_DIR" 2>/dev/null && ok "unmount clean" || bad "unmount failed (run: fusermount3 -u $MOUNT_DIR)"
@@ -102,7 +124,7 @@ if [[ "$FAIL" -ne 0 ]]; then
   echo "NOT READY ❌ — see failures above"; exit 1
 elif [[ "$EXPECTED" -ne 0 ]]; then
   echo "MACHINE READY ✅ (read-only — $EXPECTED write operation(s) denied as expected)"
-  echo "   Pull works; push does not. Set WRITE_EXPECTED=1 once an S3 policy is attached."
+  echo "   Pull works; push does not yet. When the write role lands: log in to its profile and re-run this."
   exit 0
 else
   echo "MACHINE READY ✅ (read + write)"; exit 0
