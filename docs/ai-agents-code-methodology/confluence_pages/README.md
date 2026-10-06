@@ -72,14 +72,15 @@ images, so there is no second upload step and cross-page links resolve by title.
 |---|---|
 | Always-on orientation | `AGENTS.md`, `.cursor/rules/*.mdc` |
 | On-demand detail | `data/changes/**` |
-| Sanitise / kg skills | `.cursor/skills/` |
+| Sanitise / kg / day skills | `.cursor/skills/` (`day`, `kg`, `kg-refresh`, `sanitise-diff`) |
 | Hard gates | `.cursor/hooks.json` |
 | Machine role (shared trail) | machine-local `IDENTITY.md` (gitignored) |
 
 ## s3-sync status
 
 `docs/synchro/s3-sync/README.md` is **Cursor-adapted**: behavioural rules (recovery
-expiry, append-only ledgers, shared store wins), authored-inside-derived, and
-`AGENTS.md` / `.cursor/rules` for identity — no dual Claude pointer. Travel/bring-up
-docs under `docs/synchro/machine-sync/` may still describe older Claude laptop
-bundles; they are a separate transport story, not this Confluence pack.
+expiry, append-only ledgers, **guard both directions**, one writer per per-machine
+file, shared store wins), authored-inside-derived, Cursor **`day`** skill as the
+daily loop, and `AGENTS.md` / `.cursor/rules` for identity — no dual Claude pointer.
+Travel/bring-up docs under `docs/synchro/machine-sync/` may still describe older
+Claude laptop bundles; they are a separate transport story, not this Confluence pack.

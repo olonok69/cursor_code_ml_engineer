@@ -16,11 +16,12 @@ STAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 ROLE_UP="$(printf '%s' "$MACHINE_ROLE" | tr '[:lower:]' '[:upper:]')"
 
 # --- live checks -----------------------------------------------------------
-ACCOUNT="$(aws sts get-caller-identity --profile "$PROFILE" --query Account --output text 2>/dev/null || echo UNAVAILABLE)"
+READ_PROFILE="${READ_PROFILE:-$PROFILE}"
+ACCOUNT="$(aws sts get-caller-identity --profile "$READ_PROFILE" --query Account --output text 2>/dev/null || echo UNAVAILABLE)"
 MOUNT="absent"; command -v mount-s3 >/dev/null 2>&1 && MOUNT="$(mount-s3 --version 2>&1)"
 # head-bucket = true reachability/authorization (works even when the prefix is
 # empty, unlike `s3 ls` on an empty prefix which returns non-zero).
-BUCKET_OK="no";  aws s3api head-bucket --bucket "$BUCKET" --profile "$PROFILE" >/dev/null 2>&1 && BUCKET_OK="yes"
+BUCKET_OK="no";  aws s3api head-bucket --bucket "$BUCKET" --profile "$READ_PROFILE" >/dev/null 2>&1 && BUCKET_OK="yes"
 DATA_OK="no";    [[ -d "$LOCAL_DATA" ]] && DATA_OK="yes"
 
 print_card() {
@@ -29,7 +30,7 @@ cat <<EOF
 | machine     : $MACHINE_NAME  (host $HOST)
 | role        : $ROLE_UP
 | environment : $ENVN
-| S3 target   : s3://$BUCKET/$PREFIX   (profile $PROFILE, $REGION)
+| S3 target   : s3://$BUCKET/$PREFIX   (read $READ_PROFILE, write $PROFILE, $REGION)
 | AWS account : $ACCOUNT
 | bucket read : $BUCKET_OK
 | local data  : $DATA_OK   ($LOCAL_DATA)
@@ -65,7 +66,7 @@ if [[ "${1:-}" == "--write" ]]; then
 - **Machine:** $MACHINE_NAME  (host \`$HOST\`)
 - **Role:** $ROLE_UP
 - **Environment:** $ENVN
-- **S3 target:** \`s3://$BUCKET/$PREFIX\`  (profile \`$PROFILE\`, region \`$REGION\`)
+- **S3 target:** \`s3://$BUCKET/$PREFIX\`  (read profile \`$READ_PROFILE\`, write profile \`$PROFILE\`, region \`$REGION\`)
 - **AWS account (live):** $ACCOUNT
 - **Bucket reachable (live):** $BUCKET_OK
 - **Local data present:** $DATA_OK  (\`$LOCAL_DATA\`)

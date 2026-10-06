@@ -166,15 +166,17 @@ PAGES = [
     ("01-for-new-joiners", "For new joiners (Cursor)",
      ("file", "01-for-new-joiners.md"),
      "Second-person onboarding: Cursor Day 0, AWS access, shared-record setup, "
-     "the five rules, confidentiality, and the work loop. Hand this to the new person."),
+     "day / kg / kg-refresh skills, the collaboration rules, confidentiality, "
+     "and the work loop. Hand this to the new person."),
     ("02-onboarder", "Onboarder checklist (Cursor)",
      ("file", "02-onboarder.md"),
      "Your side of onboarding — IAM gate, Cursor posture, round-trip acceptance test, "
      "methodology adoption checks. Do not hand this to the joiner."),
     ("03-shared-record", "Shared record (S3 sync)",
      ("file", "03-shared-record.md"),
-     "Bucket, roles, identity for Cursor (AGENTS.md → IDENTITY.md), daily pull/push, "
-     "behavioural rules (30-day recovery, append-only, store wins), troubleshooting."),
+     "Bucket, roles, identity for Cursor (AGENTS.md → IDENTITY.md), daily **day** skill, "
+     "behavioural rules (both directions, exit 4, 30-day recovery, append-only), "
+     "kg / kg-refresh, troubleshooting."),
     ("04-diagnose", "Diagnose before you spend",
      ("tech", ["0.", "1.", "2.", "3."]),
      "Contract-first triage, free deterministic oracle, canaries, provenance."),

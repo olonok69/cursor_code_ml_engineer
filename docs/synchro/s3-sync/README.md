@@ -254,7 +254,19 @@ Two refinements that turned out to matter more than the check itself:
   tooling ate the evidence.**
 
 Course scripts (genericised): [`ejemplos/metodologia/s3-sync/`](../../ejemplos/metodologia/s3-sync/).
-Routine that drives them: the Cursor [`day` skill](../../ejemplos/skills-plugins/.cursor/skills/day/SKILL.md).
+Routine that drives them: the Cursor [`day` skill](../../ejemplos/skills-plugins/.cursor/skills/day/SKILL.md)
+(`day start` / `day end` / `day status` / `day baton`). Query the derived index with
+[`kg`](../../docs/ai-agents-code-methodology/cursor/skills/kg/SKILL.md); contributors
+file a rebuild with
+[`kg-refresh`](../../docs/ai-agents-code-methodology/cursor/skills/kg-refresh/SKILL.md)
+(publisher only rebuilds; `--clear` must delete consumed keys in the store).
+
+> ⚠️⚠️ **A safety guard can silently disable the instrument that proves the habit.**
+> A pre-pull snapshot installed its own `trap ... EXIT` to clean up a temp file.
+> Bash keeps **one** EXIT trap, so it replaced the one writing the activity ledger.
+> Dry runs kept logging; every real pull went unrecorded for two days while the
+> dashboard stayed populated. Ask what else claims the same single-slot resource;
+> the real path and the rehearsal path are different code.
 
 ### Per-task folders need no coordination at all
 
