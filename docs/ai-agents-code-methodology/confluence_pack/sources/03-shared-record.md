@@ -13,10 +13,11 @@ Your machine's `data/` is a **working copy**. The bucket is the source of truth.
 
 | Skill | Who | Does |
 |---|---|---|
-| **`day`** | everyone | `day start` pulls and briefs; `day end` writes up and publishes; `day status` / `day baton` for collaboration |
+| **`day`** | everyone | `day start` pulls, refreshes the ticket status table (publisher writes it; everyone else gets a report-only summary) and briefs; on the publisher it also runs `delete.sh --check`; `day end` writes up and publishes; `day status` / `day baton` for collaboration |
 | **`kg`** | everyone | history-first lookup — query the graph *before* grepping `data/changes/` |
 | **`kg-refresh`** | contributor files a request; **publisher** rebuilds | never rebuild on a contributor machine |
 | **`sanitise-diff`** | everyone | before code leaves the workbench |
+| `atlassian` (Cursor rule) | everyone, optional | read-only Jira/Confluence lookups (GET only); writing stays with people |
 
 New joiners: start at **For new joiners (Cursor)** (Confluence) **and** unzip
 `ws-s3-sync-YYYYMMDD.zip` into `data/changes/` of the clone — same onboarding path. The pack
@@ -34,7 +35,7 @@ root. Onboarders: **Onboarder checklist**.
 | Contents | KG, ticket markdown, diagnostics, client binaries |
 | Size at last measure | ~6,129 objects · ~1.2 GiB (2026-10-05) |
 | Versioning | enabled — **noncurrent versions expire at 30 days** |
-| Hand-authored KG names | **115** (2026-10-02) — a rebuild keeps a third to a half; refresh = naming budget |
+| Hand-authored KG names | **125** (2026-10-10; 2,163 nodes) — a rebuild keeps a third to a half (10-10 kept 45%); refresh = naming budget |
 
 ```
                     ┌────────────────────────────────────┐
@@ -96,7 +97,7 @@ newer local files with the store's older copy, and resurrect files you deleted l
 
 | Role | Who | Does |
 |---|---|---|
-| **Publisher** | one machine at a time | rebuilds/publishes KG; only role that may `--delete` |
+| **Publisher** | one machine at a time | rebuilds/publishes KG; the only role that deletes from the bucket (with `delete.sh`) |
 | **Contributor** | every other machine / teammate | owns `changes/sst-NNNN/`; pushes docs + **refresh requests**; **reads** KG |
 
 ```bash
@@ -190,7 +191,7 @@ any bucket write — a stale card once named a profile that had been deleted.
 ./data-push.sh --go           # contributors: the publisher-baton line is normal
 ```
 
-`--delete` is **publisher-only**. `data-pull.sh` runs `ledger_check.sh` first
+Nobody runs `--delete`; removing a file is `delete.sh` on the publisher (below). `data-pull.sh` runs `ledger_check.sh` first
 (advisory). Add `--root changes` to either script to skip the roots that never move
 (measured 212s → 123s — a trim, not an order of magnitude). Quoted from intuition
 it would have entered onboarding as "minutes to seconds"; **measure before you quote**.
@@ -210,7 +211,44 @@ Cursor skill can, and its audit trail (`./activity.sh`) is what made the two
 failures above detectable at all.
 
 Contributors never run KG publish / rebuild. Publisher rebuild = naming budget
-(a third to a half of the 115 names survive).
+(a third to a half of the 125 names survive).
+
+### Deleting a file from the shared record
+
+**Publisher only, since 2026-10-10.** `aws s3 sync` cannot tell "deleted on purpose" from "missing", so a file removed
+by hand came back on the next push from any machine (a 176 MB recording returned twice). Deletions now go through one
+tool, which records them in a deletion list in the bucket (`_deletions.jsonl`, outside every synced root):
+
+```
+./delete.sh "changes/sst-NNNN/file.ext" "why"         # dry run (default)
+./delete.sh --go "changes/sst-NNNN/file.ext" "why"    # delete + record
+./delete.sh --list                                    # everything deleted so far, by whom, why
+./delete.sh --check                                   # deleted files that came back (report only)
+./delete.sh --go --restore "changes/..." "why"        # lift a deletion record
+```
+
+Single files only (no folders, no wildcards), and only while the machine holds the baton. On every machine's next
+pull the file is moved to `data/_prepull/<ts>/deleted/` (recoverable). A copy someone edited is kept and flagged,
+and no push uploads it again. The bucket keeps the deleted version for 30 days. A push that cannot read the list
+refuses with exit 5. The publisher's `day start` runs `delete.sh --check`.
+**Never `aws s3 rm` and never `--delete` by hand: neither tells the other machines.**
+
+### Ticket status table
+
+`STATUS_Tickets.xlsx` (and the `STATUS_Tickets.md` / `STATUS_CR_PLAT.md` made from it) is refreshed from Jira and
+GitHub at the publisher's `day start`. Status, type, links and row colour come from Jira; PR, merge date, on dev and
+first release come from GitHub.
+
+- **Only the publisher machine writes the workbook.** It is binary, so two writers overwrite each other with no merge.
+  On every other machine the same script runs report-only (the Cursor session-start rule runs it; it needs `uv`).
+- Publisher: close the workbook in Excel before `day start`, or the refresh is skipped. You may edit `brief`, `folder`
+  and any column you add; everything else is overwritten from Jira/GitHub. One row per ticket; rows are added, never deleted.
+- Everyone: read the `.md` files; fix wrong data in Jira, not in Excel.
+
+**Read-only Jira/Confluence for agents (optional).** `data/changes/tools/atlassian/atl.py` (Cursor rule `atlassian`)
+reads tickets, links, comments and Confluence pages. It only sends GET requests and cannot create, edit, comment or
+transition anything; those stay with people. Each person uses their own API token in `~/.config/ils/jira.env`
+(`chmod 600`). Never paste a token into a chat or a file under `data/`.
 
 ---
 
@@ -228,11 +266,13 @@ Contributors never run KG publish / rebuild. Publisher rebuild = naming budget
 2. **Shared ledgers are append-only** — `STATUS.md`, `TICKETS.md`, `FOLLOWUPS.md`,
    `TEST_MAP.md`, `CUSTOMER_GUIDANCE.md`. Add rows; never rewrite someone else's.
    Pull-time check is half the job: **also guard the push**. A per-machine ledger
-   file needs exactly **one** writer enforced in the tool.
+   file needs exactly **one** writer enforced in the tool. Not in this list, because nobody
+   hand-edits them: `STATUS_Tickets.xlsx`/`.md` and `STATUS_CR_PLAT.md` are regenerated from
+   Jira + GitHub on the publisher every morning.
 3. **Per-task folders need no coordination** — one folder per ticket, one owner.
 4. **The shared store wins on divergence** — "I have it locally" is not an argument
    once theirs is published.
-5. **Mirror-delete belongs to one role** — publisher only.
+5. **Deletion belongs to one role and one tool** — the publisher, with `delete.sh`, which records it so every machine follows. A mirror-delete or `aws s3 rm` reaches nobody, and the next push brings the file back.
 6. **Widening scope is a security event** — scan first, **canary the scanner**, then
    reconcile inventory (clean transfer ≠ completeness).
 7. **Habit needs a mechanism** — Cursor **`day`** (`day start` / `day end`);
@@ -252,7 +292,10 @@ same family (described protocol ≠ running protocol):
    bucket keys resurrects the queue on every pull. Targeted delete of consumed keys;
    never contributor `--delete`.
 3. **Sync does not delete on the way in** — remote removals stay local; stale local
-   requests re-upload. Reconcile against the receipt.
+   requests re-upload. Reconcile against the receipt. Fixed for deliberate deletions on 2026-10-10:
+   `delete.sh` writes a record to the bucket's deletion list (`_deletions.jsonl`, outside every
+   synced root), every pull moves the file aside, and no push uploads it again. The refresh-queue
+   zombies above are a separate path and still apply.
 4. **Therefore "pull before you edit" is unsafe with unpushed work** — dry-run first.
    `day start` checks for unpublished local work **before** pulling.
 
@@ -287,9 +330,7 @@ same family (described protocol ≠ running protocol):
    from memory.
 
 Scripts live in the distributable zip (`ws-s3-sync-YYYYMMDD.zip`), built with `package.sh` on
-the day it is sent (it warns about older packs; packs never travel through the bucket). Course-generic copies of the same scripts:
-`ejemplos/metodologia/s3-sync/` (start from `config.env.example` — **never** ship a
-real `config.env`).
+the day it is sent (it warns about older packs; packs never travel through the bucket).
 
 ---
 
@@ -308,6 +349,12 @@ real `config.env`).
 | Queue never empties after `--clear` | Consumed keys came back from a machine that still holds them — delete those bucket keys and the local copies on that machine |
 | `kg_labels.py check` lost/unnamed | Graph + labels unpaired — re-pull both; do not publish over it |
 | Dashboard says a colleague never closed their day | Check whether **your** push overwrote their per-machine ledger |
+| Pull says "N file(s) deleted upstream" | Normal: the publisher deleted them (`./delete.sh --list`); they are in `data/_prepull/<ts>/deleted/` |
+| Pull says "your copy differs — kept" | You edited a file the publisher deleted. Tell the publisher before deleting it yourself |
+| Push stops with exit 5 | Deletion list unreadable: `aws sso logout && aws sso login`, retry |
+| Push says "not uploading N file(s) deleted upstream" | Correct: those files were deleted on purpose |
+| A deleted file is back in the bucket | Publisher: `./delete.sh --check` lists it; find which machine still runs pre-10-10 scripts |
+| Ticket status refresh "skipped — workbook is open in Excel" | Publisher: close `STATUS_Tickets.xlsx`, re-run `day start` step |
 
 ---
 

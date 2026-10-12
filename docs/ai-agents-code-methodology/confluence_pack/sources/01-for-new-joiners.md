@@ -53,8 +53,10 @@ Ask your lead on day one for everything in this table. None of it reaches you an
 | An OpenAI key for your own `.env.test` | local extraction and integration tests; the default `pytest -q` needs **no** keys |
 | The `ws-s3-sync-YYYYMMDD.zip` pack | sync scripts + Cursor files |
 
-You also need: **AWS CLI v2**, **python3**, `tesseract` and `LibreOffice` on your PATH, and a
-GitHub PAT (`GH_PAT`) only if you build the Docker image.
+You also need: **AWS CLI v2**, **python3**, `uv` (`brew install uv` / `pipx install uv`; the agent's
+session-start ticket-status check uses it), `tesseract` and `LibreOffice` on your PATH, and a
+GitHub PAT (`GH_PAT`) only if you build the Docker image. Optional: your own Atlassian API token,
+for the agent's read-only Jira/Confluence tool (see **Shared record (S3 sync)** → Ticket status table).
 
 ```bash
 git clone git@github.com:example-org/sample-service.git && cd sample-service
@@ -201,18 +203,22 @@ changed.** `data-pull.sh --go` copies every local file it is about to replace in
 `data/_prepull/<timestamp>/` and lists them — read that list. If a shared file
 (`STATUS.md`, `FOLLOWUPS.md`, `_RESUME_*.md`) is in it, a colleague's copy is landing on yours:
 that needs a merge, not a winner. If something of yours disappears, say so within the
-month or it is gone.
+month or it is gone. If the pull exits 3 — `CASE-COLLIDING FILES` — stop: two bucket objects
+differ only in capitalisation and would land on one local file. Tell the publisher; ticket docs
+are lowercase `sst-nnnn.md`.
 
 **2. Write via sync, read via mount.**
 `data-push.sh` / `data-pull.sh` work on real local disk. The mount at `~/s3-ws-data`
 is read-only *on purpose* — object storage has no locking and no atomic rename.
 
-**3. Never use `--delete`.**
-It mirrors exactly. From a stale local view it erases a colleague's work. Publisher-only.
+**3. Never use `--delete` (or `aws s3 rm`).**
+It mirrors exactly, and from a stale local view it erases a colleague's work. Nobody uses it, not even
+the publisher. If a file should leave the shared record, ask the publisher: they remove it with
+`delete.sh`, which every machine then follows.
 
 **4. Never publish `knowledge-graph/`, never rebuild the KG.**
-There are **115** hand-authored community names (2026-10-02) that nothing regenerates — a
-rebuild keeps only a third to a half of them. Two machines publishing destroys them
+There are **125** hand-authored community names (2026-10-10 rebuild, 2,163 nodes) that nothing
+regenerates — a rebuild keeps only a third to a half of them (the 10-10 one kept 45%). Two machines publishing destroys them
 silently. You *read* the graph in Cursor with the **`kg` skill** (it runs
 `kg_query.sh`). History first — never grep `data/changes/` as the first move. New tickets
 appear in the graph only after the publisher's next refresh.
@@ -245,6 +251,21 @@ A push that overwrites a hub file your colleague just edited protects *nobody on
 machine* — measured 2026-09-18: **11 lines gone, no conflict, no error**. If
 `data-push.sh` **refuses (exit 4)**, that is not noise: diff yours against the bucket,
 **merge**, push again. Do not reach for `--allow-clobber`.
+
+#### New since 2026-10-10 — three things you will meet
+
+**A pull may say "N file(s) deleted upstream."** That is normal. The publisher deleted those files on purpose
+(`./delete.sh --list` shows why). Your pull moved them to `data/_prepull/<timestamp>/deleted/`, so nothing is lost,
+and your pushes will never upload them again. If it says **"your copy differs — kept"**, you had edited that file:
+tell the publisher before deleting it yourself. Need a file removed? Ask the publisher; only the publisher deletes.
+
+**A push may stop with exit 5** ("cannot read the deletion list"). Your SSO login expired:
+`aws sso logout && aws sso login`, then retry. It refuses because it cannot know which files must not be uploaded.
+Do not work around it.
+
+**Do not edit `data/changes/STATUS_Tickets.xlsx`.** It is maintained from Jira and GitHub on the publisher machine
+every morning. It is a binary file, so two writers overwrite each other. Read `STATUS_Tickets.md` (SST) and
+`STATUS_CR_PLAT.md` (CR, PLAT) instead. Wrong status, type or link? Fix it in Jira; the table follows the next day.
 
 **6. Use the `day` skill.** Documentation of "pull at the start, push at the end"
 does not enforce the habit. `day start` / `day end` does, and its audit trail is
@@ -286,7 +307,8 @@ every time.
 7. **Document** in `data/changes/sst-nnnn/sst-nnnn.md` — one main doc per ticket, exactly that
    name, **lowercase** (the KG indexes it; S3 keys are case-sensitive while your disk may not be).
    QA evidence goes in `sst-nnnn/qa_review_N/`. A "follow-up" is an entry in
-   `data/changes/FOLLOWUPS.md` — agents never open Jira tickets.
+   `data/changes/FOLLOWUPS.md`. Agents may read Jira and Confluence (read-only `atlassian` tool)
+   but never open, edit, comment on or transition tickets; a person does that.
 8. Close the day with **`day end`** (writes the record, publishes). If the corpus moved and a
    rebuild is due, **`kg-refresh`** files a request — you do not rebuild.
 9. **Human gate:** you (or your lead) push / open the PR / deploy — do not let the
@@ -322,14 +344,20 @@ Context → Human gate).
 | Methodology playbook | Confluence siblings: Diagnose, Verify, Context, Human gate |
 | Why code looks the way it does | `data/changes/sst-nnnn/sst-nnnn.md` (after first pull) |
 | Current in-flight state | `data/changes/STATUS.md` and the newest `data/changes/_RESUME_<date>.md` |
+| Status of every ticket (Jira status, PR, on dev, first release) | `data/changes/STATUS_Tickets.md` (SST) and `STATUS_CR_PLAT.md` (CR, PLAT) — generated daily from Jira + GitHub; read, never edit |
 | What we have told clients | `data/changes/CUSTOMER_GUIDANCE.md` |
+
+---
+
+**How fixes reach stage and production** is settled: the *Release Flow* and *Hotfix Flow*
+Confluence pages (copies in `data/docs/RELEASE_FLOW.md` / `HOTFIX_FLOW.md`). Releases are
+`release/YY.N` branches cut from `development`; `origin/stage` is frozen since 2026-08-14. Cutting
+and deploying a release is the lead's step — ask before promising QA a stage deploy.
 
 ---
 
 ## 10. Ask about these — known-unsettled
 
-- How fixes reach stage: `origin/stage` is frozen (since 2026-08-14); live refs are
-  `release/NN.NN` branches. Ask before promising QA a stage deploy
 - What counts as "one provision" — open with Legal
 - Anything in the newest `data/changes/_RESUME_<date>.md`
 

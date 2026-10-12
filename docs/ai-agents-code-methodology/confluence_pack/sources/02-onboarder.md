@@ -35,7 +35,11 @@ Do **not** hand DevOps `poc-iam-policy.json` — access is SSO permission sets n
 - [ ] An OpenAI key for their own `.env.test` (the default `pytest -q` needs none)
 - [ ] A **freshly built** pack: run `./package.sh` the day you send it, send only the file it names,
       quote its `PACK_BUILD.txt` stamp, delete any older pack it warns about. Publish your day
-      (`day end`) first so the bucket matches the pack
+      (`day end`) first so the bucket matches the pack. It must be built on or after 2026-10-10. Older
+      packs lack `delete.sh` / `_deletions.sh`, and their push re-uploads files the publisher deleted.
+- [ ] `uv` installed (the agent's session-start ticket-status check runs `uv run …`). Optional: they
+      create their own Atlassian API token for the read-only `atlassian` tool — never pasted into
+      chat or under `data/`.
 
 ---
 
@@ -110,11 +114,15 @@ Do **not** hand DevOps `poc-iam-policy.json` — access is SSO permission sets n
 2. Write via sync, read via mount (`~/s3-ws-data` read-only on purpose).
 3. **`day start` → work locally → `day end`.** One owner per ticket folder.
    Documentation of pull/push does not enforce this; the skill does.
-4. Never `--delete` (publisher-only).
+4. Never `--delete` or `aws s3 rm`, not even the publisher. Removing a file is `delete.sh` on the publisher
+   machine; every machine follows. "file(s) deleted upstream" on a pull is normal (moved to
+   `data/_prepull/<ts>/deleted/`, nothing lost; "your copy differs — kept" → tell the publisher). Push exit 5 =
+   deletion list unreadable → re-login and retry. Never edit `STATUS_Tickets.xlsx`; read `STATUS_Tickets.md` /
+   `STATUS_CR_PLAT.md`; corrections go to Jira.
 5. Never **publish** `knowledge-graph/` / never rebuild KG; **`kg-refresh`** files
    a request (by hand from `s3-sync/`: `bash ../../knowledge-graph/kg_refresh.sh request "why"`).
    The *"holds the publisher baton … NOT an error"* line on push is expected; `refresh_queue/`
-   still goes up. Names: **115** authored (2026-10-02); a rebuild keeps a third to a half —
+   still goes up. Names: **125** authored (2026-10-10); a rebuild keeps a third to a half (10-10 kept 45%) —
    refresh is a naming budget, not free.
 7. **Record conventions:** one main doc per ticket, `sst-nnnn/sst-nnnn.md`, **lowercase** (the KG
    indexes it); QA evidence in `sst-nnnn/qa_review_N/`; a follow-up is a `FOLLOWUPS.md` entry —
@@ -142,7 +150,7 @@ On their machine:
 - [ ] `./data-pull.sh --go` completes
 - [ ] `python3 <their data>/knowledge-graph/kg_labels.py check` → **0 unnamed, 0 lost**,
       no fingerprint mismatch (graph + labels arrived as a **matched pair**; expect
-      **115/115** matched on a healthy pull, as of 2026-10-02)
+      **125/125** matched on a healthy pull, as of 2026-10-10)
 - [ ] In **Cursor**, KG query (`kg` skill) for a known ticket returns a community
       **name**, not a bare integer (proves hand-authored labels survived)
 - [ ] Their first `./data-push.sh --go` shows the *"holds the publisher baton … NOT an error"*
@@ -161,7 +169,13 @@ Contributor loop:
 - [ ] `kg_refresh.sh queue --clear` → push → both sides empty.
   ⚠️ As of 2026-10-05 consumed requests can survive in the bucket and come back on every pull
   (4 did; removed by hand). If they reappear, the publisher removes those bucket keys.
-- [ ] The **publisher** removes the sandbox folder at the end (`--delete` is publisher-only)
+- [ ] The **publisher** removes the sandbox file with
+      `./delete.sh --go "changes/_sandbox_<their-machine>/notes.md" "onboarding smoke test"`
+- [ ] Their next `./data-pull.sh --go` prints "1 file(s) deleted upstream" and moves it to
+      `data/_prepull/<ts>/deleted/`; their next `./data-push.sh` dry run does not list it (this proves deletion
+      propagation on their OS)
+- [ ] They know a push exit 5 means "cannot read the deletion list" → `aws sso logout && aws sso login`,
+      retry — not a bug to work around.
 
 ---
 

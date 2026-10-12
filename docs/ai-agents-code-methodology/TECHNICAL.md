@@ -347,7 +347,8 @@ context's size is a recurring cost, not a one-time one. Architect it:
   relations between them — so "what prior work touches this area?" and "how
   are these two decisions connected?" become a zero-cost lookup that returns
   *what to read* before you open anything. This is the documentation-trail
-  twin of the semantic code graph in §1: one indexes the code, the other
+  twin of a semantic code graph (the pre-computed index over the codebase
+  listed among the free oracles in §2): one indexes the code, the other
   indexes the decisions, and both are free deterministic oracles (§2) you
   consult before any linear read or paid run.
 - **On-demand reference files (large):** the per-ticket ledgers, the full
@@ -698,7 +699,11 @@ Concretely:
   anyone unless the human **explicitly** asks in that session. Enforce with
   always-on rules + hooks (`.cursor/rules`, `.cursor/hooks.json`) and keep
   shipped artifacts reading as the human author's work (no agent attribution in
-  code, commit messages, or change-request text).
+  code, commit messages, or change-request text). Reading the issue tracker and
+  the wiki is fine and useful (live status, links, comments): use a tool that can
+  only send read requests, with each person's own token. Creating, editing,
+  commenting on or transitioning tickets, and updating wiki pages, stay with a
+  person.
 - **Machine role before shared writes:** if the trail is on shared object
   storage, read machine-local `IDENTITY.md` first (`AGENTS.md` points at it) —
   a contributor session must not republish the derived index. Query that index

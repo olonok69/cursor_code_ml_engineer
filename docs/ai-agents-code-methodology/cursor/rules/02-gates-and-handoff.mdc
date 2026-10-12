@@ -21,7 +21,7 @@ alwaysApply: true
 1. **Canary the instrument** on a known-answer case before trusting any diagnostic that informs ship — filters, locks, and scanners whose correct answer is silence must show a reject / fail path first; a negative result and a failed measurement must not share an output.
 2. Reproduce fixed contract on the real output path (wrapper/entrypoint the consumer sees — last writer).
 3. Symptom gone; assert on the **member list**, never on a total alone.
-4. Runtime parity inside the **shipping artifact** when applicable (deployed image / equivalent).
+4. Runtime parity inside the **shipping artifact** when applicable (deployed image / equivalent) — keep **one** runbook for this check, with the current access profiles, and link it rather than restating commands (profiles change; copies rot).
 5. **Look at the output** (rendered), not only at counts — before/after for visual/geometry changes.
 
 State what each gate can and cannot show. Silence on a living contract rule (comply / revise / record) is not an option.
@@ -39,4 +39,4 @@ Triage automated reviewer findings like a human’s: fix, follow-up commit, or d
 
 ## Human gate (not tool-to-tool handoff)
 
-Company standard is **Cursor only**. Prepare the branch and next-actions note. Stop at the human gate unless explicitly asked to push/PR/deploy. Session continuity = rewrite the rolling entry-point for the *next* Cursor context.
+Company standard is **Cursor only**. Prepare the branch and next-actions note. Stop at the human gate unless explicitly asked to push/PR/deploy. Releases and stage deploys follow the team's written release / hotfix procedure — human or lead actions, never the agent's. Session continuity = rewrite the rolling entry-point for the *next* Cursor context.
