@@ -454,7 +454,7 @@ default should only add and update, because the common case is that a teammate
 is pushing at the same time and you do not want to erase their work with a
 stale local view.
 
-**Three behavioural rules the structural ones do not cover** (people break these
+**Four behavioural rules the structural ones do not cover** (people break these
 because nothing stops them):
 
 1. ⚠️⚠️ **Recovery expires — and users own their own work.** Versioning is usually
