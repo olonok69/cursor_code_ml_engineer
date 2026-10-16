@@ -31,8 +31,10 @@ no merge. Everything here exists to make that cost survivable.
 | `mount-data.sh` / `unmount-data.sh` | The **read-only** live view. Never write through a mount. |
 | `_activity_log.sh` | One JSON line per run, to `_activity/<machine>.jsonl`. |
 | `_config_check.sh` | Actionable failure when `config.env` predates the per-root model. |
+| `delete.sh` | **Publisher only, baton held.** Deletes ONE file from the store on purpose and appends a tombstone to `_deletions.jsonl`; `--list`, `--check` (deleted files that came back), `--restore`, `--record-only`. Dry-run by default. |
+| `_deletions.sh` | Sourced by pull, push and `delete.sh`: reads the tombstone list (404 = empty; any other failure = unreadable, never empty), moves tombstoned files aside on pull, excludes them on push. |
 
-## Five things worth reading the code for
+## Six things worth reading the code for
 
 **1. The guard must cover both directions.** A pull clobbers *you*, and you can be made to notice.
 A push clobbers *your colleague*, and you cannot — the evidence is on a machine you never look at.
@@ -65,6 +67,16 @@ almost certainly carry a lifecycle rule expiring noncurrent versions after ~30 d
 overwrite is recoverable *for 30 days, and only if somebody notices* — and nobody audits anyone
 else's files. Say it literally in onboarding.
 
+**6. "Deleted on purpose" is information sync cannot carry.** `aws s3 sync` sees a file removed
+from the store as merely *missing*, so the next push from any machine uploads it again — a 176 MB
+recording deleted by hand came back twice in two days. The fix is a tombstone list kept in the
+store but **outside every synced root** (inside one, a contributor push would overwrite it with a
+stale copy), written only by the publisher through `delete.sh`. A pull moves the file aside
+(`_prepull/<ts>/deleted/`, never `rm`) only if the local copy still matches the recorded md5; a push
+that cannot read the list **refuses** (exit 5), because an unreadable list read as empty is exactly
+the bug it exists to stop. Note the 404 test: an expired SSO token also says "does not exist", so
+only S3's own `NoSuchKey` counts as "no deletions yet".
+
 ## Try it
 
 ```bash
@@ -74,6 +86,8 @@ cp config.env.example config.env     # then edit it
 ./data-push.sh                       # preview  ->  --go to apply
 ./data-push.sh --root changes        # limit to one root
 ./activity.sh                        # who synced, when, per machine
+./delete.sh <path> "why"             # publisher: preview a deliberate deletion  ->  --go
+./delete.sh --list                   # what was deleted, by whom, why
 ```
 
 ⚠️ `--root` is a scope flag, not a speed trick. Measured on the real installation: full sweep 212s,

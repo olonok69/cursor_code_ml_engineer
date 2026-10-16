@@ -9,8 +9,8 @@ Parent guide: [`../CURSOR_ADAPTATION.md`](../CURSOR_ADAPTATION.md).
 | Path | Purpose |
 |---|---|
 | `mcp.json.example` | Project MCP: CodeGraph, Serena, Playwright, Context7 |
-| `rules/*.mdc` | Always-applied methodology rules (lean) |
-| `skills/*/SKILL.md` | `kg`, `kg-refresh`, `methodology-plan`, `sanitise-diff` |
+| `rules/*.mdc` | Always-applied methodology rules (lean), plus `atlassian.mdc` (agent-requested, not always-applied) |
+| `skills/*/SKILL.md` | `kg`, `kg-refresh`, `methodology-plan`, `sanitise-diff`, `day`, `atlassian` (read-only Jira/Confluence), `evidence` (read-only run-evidence capture) |
 | `hooks.json.example` | Optional hard gate: block push/deploy shell |
 | `hooks/block-external-git.ps1` | Hook script for Windows/PowerShell hosts |
 | `AGENTS.md.example` | Optional repo root pointer file |

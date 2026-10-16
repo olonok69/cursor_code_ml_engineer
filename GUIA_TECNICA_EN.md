@@ -306,12 +306,22 @@ rules, from the product UI. There is no `/plugin install` command.
 .cursor/skills/kg-refresh/SKILL.md
 .cursor/skills/sanitise-diff/SKILL.md
 .cursor/skills/methodology-plan/SKILL.md
+.cursor/skills/day/SKILL.md
+.cursor/skills/atlassian/SKILL.md     # read-only Jira/Confluence (GET)
+.cursor/skills/evidence/SKILL.md      # a run's evidence, read-only
 ```
 Real project skill examples: [`ejemplos/skills-plugins/.cursor/skills/`](./ejemplos/skills-plugins/.cursor/skills/)
-(`audit`, `deploy-staging`, `day`). Methodology pack:
+(`audit`, `deploy-staging`, `day`, `atlassian`, `evidence`). Methodology pack:
 [`docs/ai-agents-code-methodology/cursor/skills/`](./docs/ai-agents-code-methodology/cursor/skills/).
 
 ⚠️ **The strongest reason to reach for a skill is not convenience — it is enforcement.** A rule that lives only in a runbook decays silently, and nobody can see it decaying. The `day` skill in that folder exists because "pull at the start, push at the end" sat in our operations doc **for months without being followed**; packaging it as a callable routine both executes it and leaves the record that makes a lapse visible. See §15B.
+
+Since then the `day start` briefing has grown two lines, both **read-only**: ticket status refreshed
+from the tracker (the `atlassian` skill: GET only; creating, editing, commenting on or transitioning
+tickets stays with the person, and updating a Confluence page goes plan → diff → human OK per page)
+and the last 24 h of service failures, counted without downloading anything (the `evidence` skill,
+`discover --list`). Genericised tools with offline tests:
+[`ejemplos/metodologia/tools/`](./ejemplos/metodologia/tools/).
 
 > **Note (August 2026):** Skills, Marketplace, `.cursor/agents/` and `agent -p` are documented at
 > `docs.cursor.com`. If a row in [`ejemplos/README.md`](./ejemplos/README.md) looks stale, trust
@@ -603,7 +613,8 @@ Real material: [`docs/ai-agents-code-methodology/`](./docs/ai-agents-code-method
   surface [`cursor/`](./docs/ai-agents-code-methodology/cursor/) (`AGENTS.md.example`,
   `hooks.json.example`, `mcp.json.example`, `rules/00-methodology-core.mdc`,
   `rules/01-tool-prevalence.mdc`, `rules/02-gates-and-handoff.mdc`, `skills/kg/`, `skills/kg-refresh/`,
-  `skills/methodology-plan/`, `skills/sanitise-diff/`, `hooks/block-external-git.ps1`) +
+  `skills/methodology-plan/`, `skills/sanitise-diff/`, `skills/day/`, `skills/atlassian/`,
+  `skills/evidence/`, `rules/atlassian.mdc`, `hooks/block-external-git.ps1`) +
   [`scripts/bootstrap-cursor-repo.ps1.txt`](./docs/ai-agents-code-methodology/scripts/bootstrap-cursor-repo.ps1.txt)
 - Shared: [`TRANSFER_AND_BOOTSTRAP.md`](./docs/ai-agents-code-methodology/TRANSFER_AND_BOOTSTRAP.md),
   [`templates/CURSOR_WORKING_AGREEMENT_TEMPLATE.md`](./docs/ai-agents-code-methodology/templates/CURSOR_WORKING_AGREEMENT_TEMPLATE.md),
@@ -731,6 +742,7 @@ own private index** of the same history. Full runbook:
 | Scope grows **in reviewed phases** | It started narrow (`changes/**/*.md` + the graph) and widened in reviewed phases — **with the owner signing off each step**. Widening is easy; retracting is not. ⚠️ **Every widening is a security event**: scan first, and **canary the scanner before you believe it** (a "clean" scan counts for nothing until the same scanner has caught a planted secret). Then **reconcile**: a clean transfer report only says *"what I was asked to send, I sent"*, never *"what exists is there"*. |
 | **Write via sync, read via read-only mount** | Object storage has no locking and no atomic rename: a writable mount corrupts, and you find out weeks later. |
 | Dry-run by default; `--delete` is a separate opt-in | An exact mirror from a stale local view **erases** what a teammate just pushed. |
+| **Deliberate deletion is a tool, with a tombstone** | `aws s3 sync` cannot tell "deleted on purpose" from "missing": a file deleted by hand **came back twice** with another machine's next push (a 176 MB recording). `delete.sh` (publisher only, baton held) deletes **one** file and appends a tombstone to `_deletions.jsonl`, **outside every synced root**; every pull moves it aside to `_prepull/<ts>/deleted/` (never `rm`) and every push excludes it. A push that **cannot read** the list refuses (`exit 5`): an unreadable list read as empty is exactly the bug. Never `aws s3 rm` or `--delete` by hand. |
 | Docs = source of truth; the graph is **derived** | Per-ticket files almost never collide. The generated graph is the **only** real contention point → **one** machine publishes it. ⚠️ "Rebuild locally" is only safe if the generated tree is *purely* derived — see the next rows. |
 | **"Derived" is a property of the file, not of the folder** | Inside the generated tree lives a **hand-authored** file (the curated community names) that nothing regenerates: on a rebuild, **<1%** survived. Classify per file — *source* / *derived* / *authored inside derived* — and treat the third as source. |
 | **Pairs must move together** | The names overlay is only meaningful against the graph it came from, but sync compares **object by object** → new graph + old names = names glued to the wrong community, **with no error**. Stamp the overlay with a **fingerprint of the graph** and make the health check fail loudly. |

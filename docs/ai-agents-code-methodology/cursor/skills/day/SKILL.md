@@ -82,7 +82,7 @@ If `S3` is empty, tell the user this repo has no shared record and STOP.
 
    - **"⚠️ N existing local file(s) will be REPLACED"** — read that list aloud to the user.
      Shared hub files (`STATUS.md`, `FOLLOWUPS.md`, `SHARP_EDGES.md`, `TEST_MAP.md`,
-     `_PENDING_*.md`) appearing there means a colleague's copy is landing on top of yours,
+     `_RESUME_*.md`) appearing there means a colleague's copy is landing on top of yours,
      and **each side may hold content the other lacks — that needs a merge, not a winner.**
      Diff the snapshot against the new file before doing anything else:
      `diff data/_prepull/<ts>/changes/STATUS.md data/changes/STATUS.md`
@@ -97,7 +97,33 @@ If `S3` is empty, tell the user this repo has no shared record and STOP.
 
 3. **See who else has been active:** `(cd "$S3" && ./activity.sh)`
 
-4. **Orient — history first, status second.** Newest `data/changes/_PENDING_*.md`, then
+3b. **Refresh the ticket status table** (seconds; ≤ 5 lines — paste them into the briefing). Optional: only if
+   the project keeps a status table generated from the tracker + Git host.
+
+   ```bash
+   (cd "$(dirname "$S3")/tools" && uv run -q --with openpyxl python ticket_status/sync.py)
+   ```
+
+   Publisher: rewrites the status workbook and the `.md` made from it, from Jira (status, type, links) and GitHub
+   (PR, merge date, first release). Contributor: same summary, **writes nothing** — a binary workbook with two
+   writers is last-writer-wins. `skipped — workbook is open` → ask the user to close it and re-run.
+   `CANARY FAILED` → nothing was written; read the run log before anything else.
+
+3c. **Service failures in the last 24 h** (≈1 min; counts only, downloads nothing — paste the group lines into the
+   briefing):
+
+   ```bash
+   T="$(dirname "$S3")/tools/evidence"
+   (cd "$T" && uv run -q --with boto3 python evidence.py discover --env dev --since 24h --list; \
+               uv run -q --with boto3 python evidence.py discover --env stg --since 24h --list)
+   ```
+
+   `--list` exists because the first live run found ~240 problem runs in 24 h on dev: a downloading discover would
+   trip its own `--max-runs` guard every morning. Exit 2 → re-login first. Exit 6 → the bucket stopped keeping old
+   versions: tell the user. To collect evidence for a group, use the **evidence** skill (`fetch --doc <id>`, or
+   `discover --since 2h` without `--list`).
+
+4. **Orient — history first, status second.** Newest `data/changes/_RESUME_*.md` (older days: `_PENDING_*.md`), then
    `data/changes/STATUS.md` for your area, then `git fetch --all --prune` and
    `git status -sb`. Use the **kg** skill for prior art before designing anything — never
    a grep of `data/changes/` as the first move.
@@ -108,6 +134,7 @@ If `S3` is empty, tell the user this repo has no shared record and STOP.
    ```bash
    (cd "$S3" && ./publisher.sh status)
    bash data/knowledge-graph/kg_refresh.sh queue
+   (cd "$S3" && ./delete.sh --check)            # deleted files that came back (report only)
    ```
 
    Report what is pending; do **not** start a refresh unasked — it is ~100 naming
@@ -200,6 +227,8 @@ now owns. `claim --force` overrides a held baton — confirm with the user every
 ## Rules that hold in every branch
 
 - **Never `--delete`.** Publisher-only, deliberate, and only right after a fresh pull.
+- **Deleting from the shared store** is `./delete.sh` (publisher), never `aws s3 rm` or `--delete` —
+  otherwise the other machines upload it again on their next push.
 - **Never push `knowledge-graph/` from a contributor.** The tool enforces it; do not work
   around it.
 - **Re-login before diagnosing an access error** — the error describes your cached token.

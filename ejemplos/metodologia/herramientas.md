@@ -28,6 +28,8 @@ y en qué orden. Eso convierte "tengo MCP instalado" en "el agente tira de la to
 | Docs de librería | **Context7** | Vs corte de entrenamiento |
 | git / PRs | `gh`, `git` | status-first |
 | Tickets / lecciones del área | **Skill `kg`** (o STATUS fallback) | history-first antes de grep |
+| Estado vivo de un ticket / página de la wiki | **Skill `atlassian`** ([`tools/atlassian/`](./tools/atlassian/)) | Solo `GET`, impuesto en el código; tickets y Confluence los escribe la persona (Confluence: plan → diff → OK por página) |
+| Evidencia de una ejecución que falló | **Skill `evidence`** ([`tools/README.md`](./tools/README.md)) | La línea de log es el índice; versión de S3 por ventana de tiempo, no la actual; solo lectura |
 | Trabajo paralelo independiente | **Task** (explore / generalPurpose) | Sin ensuciar el hilo principal |
 
 ## Instalación y smoke (Cursor / demo WORKSPACE)

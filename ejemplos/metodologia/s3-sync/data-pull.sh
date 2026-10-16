@@ -15,6 +15,7 @@ source ./config.env
 [[ -r ./_config_check.sh ]] && source ./_config_check.sh
 # Per-machine append-only record of this run (2026-09-16). Never fails the sync.
 [[ -r ./_activity_log.sh ]] && source ./_activity_log.sh || true
+[[ -r ./_deletions.sh ]] && source ./_deletions.sh || true
 [[ -r ./_queue_reconcile.sh ]] && source ./_queue_reconcile.sh || true
 
 DRYRUN="--dryrun"
@@ -84,6 +85,20 @@ fi
 
 echo ">>> s3://$BUCKET/$PREFIX  ->  $LOCAL_DATA  (profile=$READ_PROFILE)"
 
+# ── DELETIONS FROM THE PUBLISHER (2026-10-10) ────────────────────────────────
+# Files deleted on purpose (delete.sh) are moved aside here — never rm-ed — and never pulled back.
+# Design: README.md, point 6 ("Deleted on purpose"). An unreadable list is reported, never treated as empty.
+DEL_OK=0
+if declare -f deletions_fetch >/dev/null 2>&1; then
+  if deletions_fetch "$READ_PROFILE" && deletions_py tombstoned >/dev/null; then
+    DEL_OK=1
+    deletions_apply_local "$LOCAL_DATA" "$LOCAL_DATA/_prepull/$(date -u +%Y%m%d-%H%M%S)" \
+                          "$([[ -n "$DRYRUN" ]] && echo dry || echo go)"
+  else
+    echo ">>> ⚠️  deletion list UNREADABLE — files deleted upstream are not handled on this pull." >&2
+  fi
+fi
+
 # ── PRE-PULL SNAPSHOT + DIVERGENCE GUARD (2026-09-17) ────────────────────────
 # ⚠️⚠️ `aws s3 sync` transfers on a SIZE DIFFERENCE, not only when the remote copy is
 # newer, so a pull OVERWRITES local work that is newer than the bucket's — silently, with
@@ -123,10 +138,11 @@ if [[ -z "$DRYRUN" && "$SNAPSHOT" -eq 1 ]]; then
     if [[ "$root" == "changes" && -n "${MACHINE_NAME:-}" ]]; then
       pull_only=( --exclude "s3-sync/_activity/${MACHINE_NAME}.jsonl" )
     fi
+    DEL_EXCL=(); [[ $DEL_OK -eq 1 ]] && deletions_exclude_args "$root"
     aws s3 sync "s3://$BUCKET/$PREFIX/$root" "$LOCAL_DATA/$root" \
       --profile "$READ_PROFILE" --region "$REGION" \
       ${filters[@]+"${filters[@]}"} "${JUNK_ARGS[@]}" \
-      ${pull_only[@]+"${pull_only[@]}"} \
+      ${pull_only[@]+"${pull_only[@]}"} ${DEL_EXCL[@]+"${DEL_EXCL[@]}"} \
       $DELETE --dryrun 2>/dev/null >> "$_plan" || true
     unset filters pull_only
   done
@@ -156,7 +172,7 @@ if [[ -z "$DRYRUN" && "$SNAPSHOT" -eq 1 ]]; then
     echo "    Undo the whole pull with:  cp -a \"$SNAP/.\" \"$LOCAL_DATA/\""
   else
     echo "    nothing existing would be replaced."
-    rmdir "$SNAP" 2>/dev/null; rm -f "$SNAP.list" 2>/dev/null
+    rmdir "$SNAP" 2>/dev/null || true; rm -f "$SNAP.list" 2>/dev/null || true   # a non-empty SNAP (deleted/ from the step above, same second) must not abort the pull
   fi
 
   # Case-colliding keys: two S3 objects differing only in case map to ONE file on a
@@ -202,10 +218,11 @@ for root in "${SYNC_ROOTS[@]}"; do
   fi
 
   echo ">>> $root"
+  DEL_EXCL=(); [[ $DEL_OK -eq 1 ]] && deletions_exclude_args "$root"
   aws s3 sync "s3://$BUCKET/$PREFIX/$root" "$LOCAL_DATA/$root" \
     --profile "$READ_PROFILE" --region "$REGION" \
     ${filters[@]+"${filters[@]}"} "${JUNK_ARGS[@]}" \
-    ${pull_only[@]+"${pull_only[@]}"} \
+    ${pull_only[@]+"${pull_only[@]}"} ${DEL_EXCL[@]+"${DEL_EXCL[@]}"} \
     $DELETE $DRYRUN | tee -a "$ACTLOG"
   unset filters pull_only
 done

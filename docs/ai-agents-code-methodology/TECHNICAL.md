@@ -368,7 +368,11 @@ context's size is a recurring cost, not a one-time one. Architect it:
   `.cursor/skills/` — **`kg`** (history-first graph lookup before grepping the
   trail), **`kg-refresh`** (contributor files a request; publisher rebuilds with
   the baton — `--clear` must delete consumed keys in the store), **`day`**
-  (open/close the working day on the shared record), **`sanitise-diff`**. These
+  (open/close the working day on the shared record; `day start` also refreshes
+  the ticket status table from the tracker and counts the last 24 h of service
+  failures without downloading anything), **`sanitise-diff`**, **`atlassian`**
+  (read-only tracker/wiki lookups), **`evidence`** (collect a failed run's
+  inputs and outputs *as they were at the run*, read-only). These
   are callable routines, not documentation: the strongest reason to reach for a
   skill is **enforcement**, not convenience.
 

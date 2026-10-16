@@ -56,7 +56,7 @@ Spanish originals of the guides and deck remain at [`README.md`](./README.md) an
 - [`ejemplos/context/`](./ejemplos/context/) — context-window management in Cursor: anatomy, controls, hygiene (§03).
 - [`ejemplos/prompt-caching/`](./ejemplos/prompt-caching/) — the caching mechanism (Anthropic API) + what you actually control in Cursor (§03).
 - [`ejemplos/mcp/`](./ejemplos/mcp/) — `.cursor/mcp.json` with scopes and per-environment secrets (§04).
-- [`ejemplos/skills-plugins/`](./ejemplos/skills-plugins/) — skills under `.cursor/skills/` (§05).
+- [`ejemplos/skills-plugins/`](./ejemplos/skills-plugins/) — skills under `.cursor/skills/` (§05), including the real project's `day`, `atlassian` (read-only Jira/Confluence) and `evidence` (read-only run evidence); their tools are in `ejemplos/metodologia/tools/`.
   **Live in this repo:** root `.cursor/skills/` (`audit`, `audit-python`, `deploy-staging`).
   **Demo targets:** [`ex_npm/`](./ex_npm/) (`/audit`) · [`ex_app/`](./ex_app/) (`/audit-python`) · [`ex_staging/`](./ex_staging/) (`/deploy-staging`).
 - [`ejemplos/subagents/`](./ejemplos/subagents/) — subagent templates and the subagent-vs-Background/Cloud Agent diagram (§06).

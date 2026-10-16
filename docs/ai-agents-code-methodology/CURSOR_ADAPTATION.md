@@ -227,11 +227,15 @@ Define once; keep in the working agreement + rules:
     00-methodology-core.mdc
     01-tool-prevalence.mdc
     02-gates-and-handoff.mdc
+    atlassian.mdc            # agent-requested: read-only Jira/Confluence
   skills/
     kg/SKILL.md
     kg-refresh/SKILL.md
     methodology-plan/SKILL.md
     sanitise-diff/SKILL.md
+    day/SKILL.md
+    atlassian/SKILL.md       # read-only tracker/wiki
+    evidence/SKILL.md        # read-only run-evidence capture
   hooks.json               # optional hard gates
   hooks/
     block-external-git.ps1

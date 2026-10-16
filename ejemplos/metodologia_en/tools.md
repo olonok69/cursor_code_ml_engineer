@@ -28,6 +28,8 @@ and in what order. That turns "I have MCP installed" into "the agent pulls the r
 | Library docs | **Context7** | Vs training cutoff |
 | git / PRs | `gh`, `git` | status-first |
 | Tickets / lessons in the area | **Skill `kg`** (or STATUS fallback) | history-first before grep |
+| Live ticket status / a wiki page | **Skill `atlassian`** ([`../metodologia/tools/atlassian/`](../metodologia/tools/atlassian/)) | GET only, enforced in code; tickets and Confluence are written by the person (Confluence: plan → diff → OK per page) |
+| Evidence of a failed run | **Skill `evidence`** ([`../metodologia/tools/README.md`](../metodologia/tools/README.md), Spanish) | The log line is the index; S3 version chosen by time window, not the current one; read-only |
 | Independent parallel work | **Task** (explore / generalPurpose) | Without cluttering the main thread |
 
 ## Install and smoke (Cursor / WORKSPACE demo)

@@ -43,8 +43,12 @@ This file lists all artifacts included in the portable methodology package.
 8. `cursor/skills/kg-refresh/SKILL.md`
 9. `cursor/skills/methodology-plan/SKILL.md`
 10. `cursor/skills/sanitise-diff/SKILL.md`
-11. `cursor/hooks.json.example`
-12. `cursor/hooks/block-external-git.ps1`
+11. `cursor/skills/day/SKILL.md`
+12. `cursor/skills/atlassian/SKILL.md` — read-only Jira/Confluence (GET only; Confluence writes plan → diff → human OK)
+13. `cursor/skills/evidence/SKILL.md` — read-only capture of a service run's evidence
+14. `cursor/rules/atlassian.mdc`
+15. `cursor/hooks.json.example`
+16. `cursor/hooks/block-external-git.ps1`
 
 ## Scripts
 

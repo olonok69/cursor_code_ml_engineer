@@ -42,7 +42,7 @@ ejemplos sanitizados, verificados contra `cursor.com/docs` (agosto 2026).
 - [`ejemplos/context/`](./ejemplos/context/) — gestión del context window en Cursor: anatomía, mandos, higiene (§03).
 - [`ejemplos/prompt-caching/`](./ejemplos/prompt-caching/) — el mecanismo de caching (API Anthropic) + qué controlas de verdad en Cursor (§03).
 - [`ejemplos/mcp/`](./ejemplos/mcp/) — `.cursor/mcp.json` con scopes y secretos por entorno (§04).
-- [`ejemplos/skills-plugins/`](./ejemplos/skills-plugins/) — skills en `.cursor/skills/` (§05).
+- [`ejemplos/skills-plugins/`](./ejemplos/skills-plugins/) — skills en `.cursor/skills/` (§05), incluidas las del proyecto real `day`, `atlassian` (Jira/Confluence de solo lectura) y `evidence` (evidencia de una ejecución, solo lectura); sus herramientas, en `ejemplos/metodologia/tools/`.
   **Live en este repo:** raíz `.cursor/skills/` (`audit`, `audit-python`, `deploy-staging`).
   **Targets de demo:** [`ex_npm/`](./ex_npm/) (`/audit`) · [`ex_app/`](./ex_app/) (`/audit-python`) · [`ex_staging/`](./ex_staging/) (`/deploy-staging`).
 - [`ejemplos/subagents/`](./ejemplos/subagents/) — plantillas de subagent y el diagrama subagent-vs-Background/Cloud Agent (§06).

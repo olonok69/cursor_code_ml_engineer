@@ -16,6 +16,7 @@ source ./config.env
 # Per-machine append-only record of this run (2026-09-16). Never fails the sync.
 [[ -r ./_activity_log.sh ]] && source ./_activity_log.sh || true
 [[ -r ./_queue_reconcile.sh ]] && source ./_queue_reconcile.sh || true
+[[ -r ./_deletions.sh ]] && source ./_deletions.sh || true
 
 DRYRUN="--dryrun"
 DELETE=""
@@ -286,9 +287,35 @@ fi
 # upload. Walking only the roots in scope keeps purely-local trees free. JUNK_ARGS still
 # runs last as the backstop for junk that lives INSIDE a synced root.
 # Before the sync, so an already-consumed request is not pushed back (_queue_reconcile.sh).
+# ── DELETIONS FROM THE PUBLISHER (2026-10-10) ────────────────────────────────
+# A file deleted on purpose (delete.sh) must never be uploaded again — that is how a deleted 176 MB recording came
+# back twice. Without the list we cannot know what not to upload, so a REAL push refuses (exit 5); a dry run warns.
+# Design: README.md, point 6 ("Deleted on purpose")
+DEL_OK=0
+if declare -f deletions_fetch >/dev/null 2>&1; then
+  if deletions_fetch "$SYNC_PROFILE" && _tomb="$(deletions_py tombstoned)"; then
+    DEL_OK=1
+    _here=0; _names=""
+    while IFS= read -r _p; do
+      [[ -n "$_p" && -f "$LOCAL_DATA/$_p" ]] || continue
+      _here=$((_here+1)); _names+="       $_p"$'\n'
+    done <<<"$_tomb"
+    if [[ $_here -gt 0 ]]; then
+      echo ">>> not uploading $_here file(s) deleted upstream (./delete.sh --list for why):"
+      printf '%s' "$_names"
+    fi
+  elif [[ -z "$DRYRUN" ]]; then
+    _act_status="refused"
+    echo "⛔ REFUSED: cannot read the deletion list, so this push cannot know which files must not be uploaded." >&2
+    exit 5
+  else
+    echo ">>> ⚠️  deletion list unreadable — a real push would refuse (exit 5)." >&2
+  fi
+fi
 declare -f reconcile_refresh_queue >/dev/null 2>&1 && reconcile_refresh_queue "$DRYRUN"
 KG_RESTRICTED=0
 for root in "${SYNC_ROOTS[@]}"; do
+  DEL_EXCL=(); [[ $DEL_OK -eq 1 ]] && deletions_exclude_args "$root"
   # ⚠️ A contributor is blocked from publishing the GRAPH, never from the refresh QUEUE.
   # refresh_queue/ is the contributor loop's mailbox: kg_refresh.sh writes the request there
   # and the whole coordination model depends on it reaching the bucket. Skipping the root
@@ -300,7 +327,7 @@ for root in "${SYNC_ROOTS[@]}"; do
     echo ">>> $root  (refresh_queue/ only — the publisher owns the rest)"
     aws s3 sync "$LOCAL_DATA/$root" "s3://$BUCKET/$PREFIX/$root" \
       --profile "$SYNC_PROFILE" --region "$REGION" \
-      --exclude "*" --include "refresh_queue/*" "${JUNK_ARGS[@]}" \
+      --exclude "*" --include "refresh_queue/*" "${JUNK_ARGS[@]}" ${DEL_EXCL[@]+"${DEL_EXCL[@]}"} \
       $DRYRUN | tee -a "$ACTLOG"
     KG_RESTRICTED=1
     continue
@@ -338,7 +365,7 @@ for root in "${SYNC_ROOTS[@]}"; do
   aws s3 sync "$LOCAL_DATA/$root" "s3://$BUCKET/$PREFIX/$root" \
     --profile "$SYNC_PROFILE" --region "$REGION" \
     ${filters[@]+"${filters[@]}"} "${JUNK_ARGS[@]}" \
-    ${push_only[@]+"${push_only[@]}"} \
+    ${push_only[@]+"${push_only[@]}"} ${DEL_EXCL[@]+"${DEL_EXCL[@]}"} \
     $DELETE $DRYRUN | tee -a "$ACTLOG"
   unset filters push_only
 done

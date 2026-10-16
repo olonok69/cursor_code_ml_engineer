@@ -13,6 +13,7 @@ adaptada (rules, skills, MCP, hooks).
 | [`herramientas.md`](./herramientas.md) | Prevalencia: CodeGraph, Serena, Playwright, skill `kg`, oráculos. |
 | [`machine-sync.md`](./machine-sync.md) | Runbook de ops (tarball bring-up + evolución a S3); nota de adaptación Cursor al inicio. |
 | [`s3-sync/`](./s3-sync/) | Scripts reales genericizados (`data-pull`/`data-push`/…); empieza por `config.env.example`. |
+| [`tools/`](./tools/) | **Dos herramientas reales de solo lectura**, genericizadas y con tests offline: cliente Jira/Confluence que solo envía `GET` (+ la única escritura, a Confluence, con OK humano por página) y el núcleo de la captura de evidencia (qué versión de S3 usó de verdad una ejecución). |
 | [`../../docs/synchro/s3-sync/README.md`](../../docs/synchro/s3-sync/README.md) | Registro de ingeniería compartido sobre S3 (sync vs mount, roles, identidad, guardia en ambas direcciones). |
 | [`../../docs/KNOWLEDGE_GRAPH.md`](../../docs/KNOWLEDGE_GRAPH.md) | Grafo de tickets (graphify) — scripts iguales; skill `kg` en Cursor. |
 | [`../../docs/ai-agents-code-methodology/CURSOR_ADAPTATION.md`](../../docs/ai-agents-code-methodology/CURSOR_ADAPTATION.md) | Pack completo de adaptación. |

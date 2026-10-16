@@ -63,7 +63,7 @@ pwsh data/changes/ai-agent-methodology/scripts/bootstrap-cursor-repo.ps1
 This creates if missing:
 
 1. `.cursor/rules/*.mdc` — methodology gates + tool prevalence
-2. `.cursor/skills/{kg,kg-refresh,methodology-plan,sanitise-diff}/`
+2. `.cursor/skills/{kg,kg-refresh,methodology-plan,sanitise-diff,day,atlassian,evidence}/`
 3. `.cursor/mcp.json` from example (substitutes `__REPO_ROOT__`)
 4. `.cursor/hooks.json` + `hooks/block-external-git.ps1`
 5. `AGENTS.md` at repo root

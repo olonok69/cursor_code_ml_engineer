@@ -288,11 +288,34 @@ This needs saying out loud because the instinct runs the other way — your loca
 the one you can see, and it feels more real. A team that has not agreed this in advance
 resolves each divergence by argument instead of by rule.
 
-### Mirror-delete belongs to one role
+### Deletion belongs to one role and one tool
 
-Covered under `--delete` below, but it belongs in this list too: the flag that propagates
-a removal is the same flag that destroys unpushed work from a stale view. Scope it to the
-publisher role, not to whoever remembers the caveat.
+The flag that propagates a removal (`--delete`) is the same flag that destroys unpushed
+work from a stale view. Scope it to the publisher role, not to whoever remembers the
+caveat — and even then it is not enough, which is why deletion became a tool of its own.
+
+`aws s3 sync` cannot express "deleted on purpose". A file removed from the store by hand
+is, to every other machine, simply *missing* — so the next push from any of them uploads
+it again. Measured: a 176 MB screen recording, deleted by hand, came back twice in two
+days. The fix is a **deletion list** (tombstones) that the sync scripts read:
+
+- `delete.sh` (publisher only, and only while holding the baton) deletes **one file**
+  and appends a record — path, reason, who, md5, size, version id — to
+  `_deletions.jsonl` in the store, **outside every synced root** (inside one, the first
+  contributor push would replace it with a stale copy). Entries are appended, never edited;
+  `--restore` appends a lifting record.
+- Every **pull** moves a tombstoned file aside into `_prepull/<ts>/deleted/` — never `rm` —
+  and only if its local copy still matches the recorded md5/size. An edited copy is kept
+  and flagged: the person who edited it decides.
+- Every **push** excludes tombstoned paths. A real push that **cannot read** the list
+  refuses (exit 5): without it, it cannot know what must not be uploaded. Only S3's own
+  "no such key" counts as "no deletions yet"; any other failure — including an expired
+  SSO token, whose message says "does not exist" too — is *unreadable*, never *empty*.
+- `delete.sh --check` (run by the publisher's `day start`) lists deleted files that are
+  back in the store and which machine pushed around that time. Report only.
+
+The rule that falls out: **never `aws s3 rm` and never `--delete` by hand** — neither
+tells the other machines.
 
 ---
 
@@ -312,8 +335,8 @@ ls -la ~/s3-<name>-data
 **On `--delete`.** Passing it mirrors exactly, removing files on one side that were
 deleted on the other. Leave it off by default: the common case is that a teammate is
 pushing while you are, and an exact mirror from a stale local view erases their work.
-Add/update-only is the safe default; mirror-delete is a deliberate, occasional
-cleanup.
+Add/update-only is the safe default. Removing a single file from the shared record is
+`./delete.sh` on the publisher (above), not `--delete`.
 
 **Readiness.** A machine is only set up when `./validate.sh` prints `MACHINE READY`.
 Don't skip it — it is what catches the half-configured profile that otherwise fails
@@ -339,7 +362,9 @@ runbook applies here unchanged).
 ## Before the first shared push — read this
 
 - **Confidentiality.** Only records and the graph are in scope. Do not widen to
-  customer data without the storage owner's sign-off.
+  customer data without the storage owner's sign-off. Tool output that collects customer
+  documents in bulk (e.g. an evidence-capture `_evidence/` folder) is excluded from the
+  push in `JUNK_ARGS`; only curated items move into a ticket folder.
 - **Secrets.** Scrub the records for embedded credentials **before** the first push.
   This is not hypothetical: investigation notes routinely capture signed URLs and
   tokens *on purpose*, as evidence of a bug — and those are exactly the strings you

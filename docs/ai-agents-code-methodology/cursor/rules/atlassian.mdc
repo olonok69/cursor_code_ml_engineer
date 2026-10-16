@@ -1,0 +1,16 @@
+---
+description: Read-only Jira + Confluence access (ticket status, links, comments, XML export, Confluence page read/diff)
+alwaysApply: false
+---
+
+# Atlassian (read-only)
+
+Use `python3 data/changes/tools/atlassian/atl.py` — subcommands `jira issue|search|links|comments|xml` and
+`confluence search|page|diff`. Credentials in `~/.config/<org>/jira.env` (each person's own token; never commit or
+print it). The tool only sends GET. Jira writes stay with the human; a Confluence page update goes through
+`confluence_write.py` (plan → diff → explicit human OK for that page → apply) and only when the human asks for it.
+A ticket status table refreshed from Jira is report-only unless this machine is the publisher per
+`data/changes/s3-sync/IDENTITY.md`.
+
+Full procedure (setup, exit codes, examples): `.cursor/skills/atlassian/SKILL.md`. Collecting service-run evidence
+(source, generated artefact, result JSON, logs) is a different tool: `.cursor/skills/evidence/SKILL.md`.

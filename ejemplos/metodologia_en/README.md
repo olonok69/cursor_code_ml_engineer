@@ -14,6 +14,7 @@ surface (rules, skills, MCP, hooks).
 | [`tools.md`](./tools.md) | Prevalence: CodeGraph, Serena, Playwright, skill `kg`, oracles. (Spanish: `herramientas.md`.) |
 | [`machine-sync.md`](./machine-sync.md) | Ops runbook (tarball bring-up + evolution to S3); Cursor adaptation note at the top. |
 | [`s3-sync/`](./s3-sync/) | Pointer to language-neutral scripts under `../metodologia/s3-sync/` (`config.env.example` only). |
+| [`../metodologia/tools/`](../metodologia/tools/) | **Two real read-only tools**, genericised, with offline tests: a Jira/Confluence client that only sends GET (plus the one write path, to Confluence, with a human OK per page) and the evidence-capture core (which S3 version a run actually used). Code is language-neutral; its README is in Spanish. |
 | [`../../docs/synchro/s3-sync/README.md`](../../docs/synchro/s3-sync/README.md) | Shared engineering record on S3 (sync vs mount, roles, identity, guard both directions). |
 | [`../../docs/KNOWLEDGE_GRAPH.md`](../../docs/KNOWLEDGE_GRAPH.md) | Ticket graph (graphify) — same scripts; skill `kg` in Cursor. |
 | [`../../docs/ai-agents-code-methodology/CURSOR_ADAPTATION.md`](../../docs/ai-agents-code-methodology/CURSOR_ADAPTATION.md) | Full adaptation pack. |

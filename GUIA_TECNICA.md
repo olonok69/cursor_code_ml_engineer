@@ -307,12 +307,22 @@ rules, desde la UI del producto. No hay comando `/plugin install`.
 .cursor/skills/kg-refresh/SKILL.md
 .cursor/skills/sanitise-diff/SKILL.md
 .cursor/skills/methodology-plan/SKILL.md
+.cursor/skills/day/SKILL.md
+.cursor/skills/atlassian/SKILL.md     # Jira/Confluence de solo lectura (GET)
+.cursor/skills/evidence/SKILL.md      # evidencia de una ejecución, solo lectura
 ```
 Ejemplos reales de skills de proyecto: [`ejemplos/skills-plugins/.cursor/skills/`](./ejemplos/skills-plugins/.cursor/skills/)
-(`audit`, `deploy-staging`, `day`). Pack de metodología con las skills anteriores:
+(`audit`, `deploy-staging`, `day`, `atlassian`, `evidence`). Pack de metodología con las skills anteriores:
 [`docs/ai-agents-code-methodology/cursor/skills/`](./docs/ai-agents-code-methodology/cursor/skills/).
 
 ⚠️ **La razón más fuerte para hacer una skill no es la comodidad: es que se cumpla.** Una regla que solo vive en un runbook se degrada en silencio, y nadie ve la degradación. La skill `day` existe porque "pull al empezar, push al terminar" estuvo en nuestro documento de operaciones **meses sin cumplirse**; empaquetarla como rutina invocable la ejecuta y además deja el rastro que hace visible el incumplimiento. Ver §15B.
+
+Desde entonces el parte de `day start` creció dos líneas, ambas de **solo lectura**: el estado de los
+tickets refrescado desde el tracker (skill `atlassian`: solo `GET`; crear, editar, comentar o
+transicionar tickets sigue siendo de la persona, y actualizar una página de Confluence va por plan →
+diff → OK humano por página) y los fallos del servicio de las últimas 24 h, contados sin descargar nada
+(skill `evidence`, `discover --list`). Herramientas genericizadas y con tests offline:
+[`ejemplos/metodologia/tools/`](./ejemplos/metodologia/tools/).
 
 > **Nota (agosto 2026):** Skills, Marketplace, `.cursor/agents/` y `agent -p` están documentados en
 > `docs.cursor.com`. Si una fila de [`ejemplos/README.md`](./ejemplos/README.md) parece antigua, confía
@@ -604,7 +614,8 @@ Material real: [`docs/ai-agents-code-methodology/`](./docs/ai-agents-code-method
   superficie [`cursor/`](./docs/ai-agents-code-methodology/cursor/) (`AGENTS.md.example`,
   `hooks.json.example`, `mcp.json.example`, `rules/00-methodology-core.mdc`,
   `rules/01-tool-prevalence.mdc`, `rules/02-gates-and-handoff.mdc`, `skills/kg/`, `skills/kg-refresh/`,
-  `skills/methodology-plan/`, `skills/sanitise-diff/`, `hooks/block-external-git.ps1`) +
+  `skills/methodology-plan/`, `skills/sanitise-diff/`, `skills/day/`, `skills/atlassian/`,
+  `skills/evidence/`, `rules/atlassian.mdc`, `hooks/block-external-git.ps1`) +
   [`scripts/bootstrap-cursor-repo.ps1.txt`](./docs/ai-agents-code-methodology/scripts/bootstrap-cursor-repo.ps1.txt)
 - Compartido: [`TRANSFER_AND_BOOTSTRAP.md`](./docs/ai-agents-code-methodology/TRANSFER_AND_BOOTSTRAP.md),
   [`templates/CURSOR_WORKING_AGREEMENT_TEMPLATE.md`](./docs/ai-agents-code-methodology/templates/CURSOR_WORKING_AGREEMENT_TEMPLATE.md),
@@ -731,6 +742,7 @@ ticket/PR; moverse degenera en empaquetarlo todo; y cada compañero acaba con **
 | Alcance **por fases**, cada una revisada | Empezó estrecho (`changes/**/*.md` + grafo) y se ensanchó en fases revisadas — **con la firma del dueño en cada salto**. Ensanchar es fácil; retraer, no. ⚠️ **Cada ampliación es un evento de seguridad**: escanea antes, y **canaria el escáner primero** (un escaneo "limpio" no cuenta hasta que el mismo escáner haya pillado un secreto plantado). Después **reconcilia**: un informe de transferencia limpio solo dice *"lo que me pediste enviar, lo envié"*, nunca *"lo que existe está"*. |
 | **Escribe por sync, lee por mount de solo lectura** | El almacenamiento de objetos no tiene locking ni rename atómico: un mount escribible corrompe y se descubre semanas después. |
 | Dry-run por defecto; `--delete` es opt-in aparte | Un espejo exacto desde una vista local vieja **borra** lo que un compañero acaba de empujar. |
+| **Borrar a propósito es una herramienta, con lápida** | `aws s3 sync` no distingue "borrado a propósito" de "falta": un fichero borrado a mano **volvió dos veces** con el siguiente `push` de otra máquina (una grabación de 176 MB). `delete.sh` (solo el publisher, con el baton) borra **un** fichero y añade una lápida a `_deletions.jsonl`, **fuera de toda raíz sincronizada**; cada `pull` lo aparta a `_prepull/<ts>/deleted/` (nunca `rm`) y cada `push` lo excluye. Un `push` que **no puede leer** la lista se niega (`exit 5`): una lista ilegible leída como vacía es justo el bug. Nunca `aws s3 rm` ni `--delete` a mano. |
 | Docs = fuente de verdad; el grafo es **derivado** | Los ficheros por ticket casi nunca chocan; el grafo generado es el único punto real de contención → lo publica **una** máquina. ⚠️ "Reconstruir en local" solo vale si el árbol es *puramente* derivado. |
 | **"Derivado" es del fichero, no de la carpeta** | Dentro del árbol generado vive un fichero **escrito a mano** (nombres curados) que no regenera nada: al reconstruir sobrevivió **menos del 1%**. Clasifica por fichero — *fuente* / *derivado* / *escrito a mano dentro del derivado* — y trata el tercero como fuente. |
 | **Los pares viajan juntos** | El overlay solo vale contra el grafo del que salió, pero el sync compara **objeto a objeto** → grafo nuevo + nombres viejos = nombres en la comunidad equivocada, **sin error**. Sella el overlay con una **huella del grafo**. |
