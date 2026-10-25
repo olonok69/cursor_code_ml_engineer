@@ -1,0 +1,25 @@
+Cursor for developers - Part 1: the tool
+
+First session of a course on Cursor aimed at developers. We look at what Cursor is, how to install it and how to use it day to day: from the editor on your desktop to the command line and agents running in the cloud. The goal is to understand the layers of the tool and how to set them up well, not just to know they exist.
+
+What this video covers:
+
+- What Cursor is: an editor with a built-in agent that reads your codebase, edits files and runs commands. The same agent runs in the editor, in the CLI (agent) and in the cloud (Background/Cloud Agents).
+- Installation and basic use: interactive mode with Plan mode and Agent mode, and headless mode with agent -p for scripts and CI.
+- Memory and instructions: AGENTS.md and rules (.cursor/rules/*.mdc), the two-level pattern that keeps the always-loaded part short, permissions with permissions.json, and how Cursor Memories differ.
+- Context: what fills the context window, how to manage it, and what you can and cannot control about prompt caching inside the product.
+- MCP: how to connect external tools (CodeGraph, Serena, Playwright, Context7) and where the configuration lives.
+- Skills and Marketplace: skills the agent picks by their description, and why the same SKILL.md works in both Cursor and Claude Code.
+- Subagents: isolating context with subagents, parallel work with Background/Cloud Agents, and when to use each.
+- Automation: hooks for deterministic control, Bugbot for PR review, the Cursor SDK and Automations.
+
+The second part of the course, in a separate video, covers the methodology for working with agents and the ticket knowledge graph.
+
+Course material (slides, guides and examples):
+https://github.com/olonok69/cursor_code_ml_engineer
+
+Equivalent course for Claude Code:
+https://github.com/olonok69/claude_code_ml_engineer
+
+Official Cursor documentation:
+https://docs.cursor.com
