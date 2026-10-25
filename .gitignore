@@ -17,3 +17,4 @@ examples/
 ejemplos/automation/node_modules/
 ejemplos/**/node_modules/
 ex_npm/node_modules/
+no_subir/
