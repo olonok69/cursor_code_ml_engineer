@@ -1,0 +1,36 @@
+Cursor for developers - Part 2: the methodology and the ticket knowledge graph
+
+Second session of the course on Cursor. A powerful tool without a method produces chaos quickly, so here we look at how to actually work with a coding agent on a project in production. The methodology does not depend on the tool: it started in Claude Code and has been transferred to Cursor in this same repository. We finish with a complete case: a knowledge graph built from the project's ticket history.
+
+The core idea: the agent is a disciplined collaborator, not an autopilot. The agent handles research, planning, implementation, tests and documentation. The person decides what gets done and is the only one who pushes, opens PRs or deploys.
+
+What this video covers:
+
+The methodology
+- The 11-stage workflow, from orientation to persisting what was learned, linked by gates that stop the work when evidence is missing.
+- Where the cost really sits: cheap when searching and reading facts, expensive when planning, implementing and verifying.
+- Why a green test does not always prove anything, with five real cases of checks that could not fail.
+- A real example from start to finish: a field that was empty in the UI but present in the PDF.
+- The tools of the method and the order to use them, from cheap and deterministic to expensive: CodeGraph, Serena, Playwright, Context7, deterministic oracles and GSD.
+- How the methodology transfers from Claude Code to Cursor: what stays the same, what changes and what has to be adapted per repository.
+- Machine sync: moving the workspace between computers with a runbook, and sharing the engineering record with a team using S3.
+
+The ticket knowledge graph
+- The problem: answering "what broke before near here" without reading the whole history.
+- The design and pipeline built with graphify, and the kg and kg-refresh skills, which are the same file in Cursor and in Claude Code.
+- The real result: 507 nodes, 672 edges and 35 communities that map to risk areas in the project, queryable without calling a model.
+- How the graph fits into the first step of the methodology.
+
+The first part of the course, in a separate video, explains the tool: installation, memory, context, MCP, skills, subagents and automation.
+
+Course material (slides, guides and examples):
+https://github.com/olonok69/cursor_code_ml_engineer
+
+Equivalent course for Claude Code:
+https://github.com/olonok69/claude_code_ml_engineer
+
+References:
+Cursor documentation: https://docs.cursor.com
+CodeGraph: https://colbymchenry.github.io/codegraph/
+Serena: https://github.com/oraios/serena
+GSD: https://github.com/tomascortereal/claude-code-setup
